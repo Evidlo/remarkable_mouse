@@ -104,7 +104,7 @@ def read_tablet(args):
     stdout = open_eventfile(args)
 
     while True:
-        _, _, _, _, e_type, e_code, e_value = struct.unpack('4IHHI', stdout.read(24))
+        _, _, e_type, e_code, e_value = struct.unpack('2IHHi', stdout.read(16))
 
         if e_type == EV_ABS:
 
