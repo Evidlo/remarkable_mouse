@@ -85,6 +85,7 @@ def open_eventfile(args):
         pkey=pkey,
         look_for_keys=False
     )
+    print("Connected to {}".format(args.address))
 
     # Start reading events
     _, stdout, _ = client.exec_command('cat /dev/input/event0')
@@ -150,26 +151,26 @@ def read_tablet(args):
 
 def main():
 
-    parser = argparse.ArgumentParser(description="use reMarkable tablet as a mouse input")
-    parser.add_argument('--orientation', default='left', choices=['vertical', 'left', 'right'])
-    parser.add_argument('--monitor', default=0, type=int, metavar='NUM', help="monitor to use")
-    parser.add_argument('--offset', default=(0, 0), type=int, metavar=('x', 'y'), nargs=2, help="offset mapped region on monitor")
-    parser.add_argument('--debug', action='store_true', default=False, help="enable debug messages")
-    parser.add_argument('--key', type=str, metavar='PATH', help="ssh private key")
-    parser.add_argument('--password', default=None, type=str, help="ssh password")
-    parser.add_argument('--address', default='10.11.99.1', type=str, help="device address")
-    args = parser.parse_args()
+    try:
+        parser = argparse.ArgumentParser(description="use reMarkable tablet as a mouse input")
+        parser.add_argument('--orientation', default='left', choices=['vertical', 'left', 'right'])
+        parser.add_argument('--monitor', default=0, type=int, metavar='NUM', help="monitor to use")
+        parser.add_argument('--offset', default=(0, 0), type=int, metavar=('x', 'y'), nargs=2, help="offset mapped region on monitor")
+        parser.add_argument('--debug', action='store_true', default=False, help="enable debug messages")
+        parser.add_argument('--key', type=str, metavar='PATH', help="ssh private key")
+        parser.add_argument('--password', default=None, type=str, help="ssh password")
+        parser.add_argument('--address', default='10.11.99.1', type=str, help="device address")
+        args = parser.parse_args()
 
-    if args.debug:
-        print('Debugging enabled...')
-        logging.getLogger('').setLevel(logging.DEBUG)
-        log.setLevel(logging.DEBUG)
+        if args.debug:
+            print('Debugging enabled...')
+            logging.getLogger('').setLevel(logging.DEBUG)
+            log.setLevel(logging.DEBUG)
 
-    read_tablet(args)
+        read_tablet(args)
+    except KeyboardInterrupt:
+        pass
 
 
 if __name__ == '__main__':
-    try:
-        main()
-    except KeyboardInterrupt:
-        pass
+    main()
