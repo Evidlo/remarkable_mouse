@@ -12,22 +12,19 @@ import paramiko
 from screeninfo import get_monitors
 from pynput.mouse import Button, Controller
 
-EV_SYNC = 0
-EV_KEY = 1
-EV_ABS = 3
+# EVTYPE_SYNC = 0
+# EVTYPE_KEY = 1
+EVTYPE_ABS = 3
 
-WACOM_EVCODE_PRESSURE = 24
-WACOM_EVCODE_DISTANCE = 25
-WACOM_EVCODE_XTILT = 26
-WACOM_EVCODE_YTILT = 27
-WACOM_EVCODE_XPOS = 0
-WACOM_EVCODE_YPOS = 1
+# WACOM_EVCODE_DISTANCE = 25
+# WACOM_EVCODE_XTILT = 26
+# WACOM_EVCODE_YTILT = 27
+EVCODE_STYLUS_PRESSURE = 24
+EVCODE_STYLUS_XPOS = 0
+EVCODE_STYLUS_YPOS = 1
 
 wacom_width = 15725
 wacom_height = 20951
-wacom_click_pressure_min = 1000
-screen_width = 675
-screen_height = 900
 
 mouse = Controller()
 logging.basicConfig(format='%(message)s')
@@ -96,7 +93,6 @@ def open_eventfile(args):
 def read_tablet(args):
     """Loop forever and map evdev events to mouse"""
 
-    updates_since_pressure = 0
     new_x = new_y = False
 
     monitor = get_monitors()[args.monitor]
@@ -107,37 +103,27 @@ def read_tablet(args):
     while True:
         _, _, e_type, e_code, e_value = struct.unpack('2IHHi', stdout.read(16))
 
-        if e_type == EV_ABS:
+        if e_type == EVTYPE_ABS:
 
             # handle x direction
             if e_code == WACOM_EVCODE_YPOS:
                 log.debug(f'{e_value}')
                 x = e_value
                 new_x = True
-                updates_since_pressure += 1
 
             # handle y direction
             if e_code == WACOM_EVCODE_XPOS:
                 log.debug(f'\t{e_value}')
-                updates_since_pressure += 1
                 y = e_value
                 new_y = True
 
             # handle draw
             if e_code == WACOM_EVCODE_PRESSURE:
                 log.debug(f'\t\t{e_value}')
-                updates_since_pressure = 0
-                if e_value > 1000:
+                if e_value > args.threshold:
                     mouse.press(Button.left)
                 else:
                     mouse.release(Button.left)
-
-            # FIXME: bug
-            # sometimes the last detected pressure is above threshold
-            # make sure pen doesnt get stuck down
-            if updates_since_pressure > 8:
-                updates_since_pressure = 0
-                mouse.release(Button.left)
 
             # only move when x and y are updated for smoother mouse
             if new_x and new_y:
@@ -146,7 +132,6 @@ def read_tablet(args):
                     monitor.x + x - mouse.position[0],
                     monitor.y + y - mouse.position[1]
                 )
-                count = 0
                 new_x = new_y = False
 
 def main():
@@ -160,6 +145,8 @@ def main():
         parser.add_argument('--key', type=str, metavar='PATH', help="ssh private key")
         parser.add_argument('--password', default=None, type=str, help="ssh password")
         parser.add_argument('--address', default='10.11.99.1', type=str, help="device address")
+        parser.add_argument('--threshold', default=1000, type=int, help="stylus pressure threshold (default 1000)")
+
         args = parser.parse_args()
 
         if args.debug:
