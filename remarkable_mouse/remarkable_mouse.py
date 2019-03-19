@@ -52,7 +52,7 @@ def fit(x, y, wacom_width, wacom_height, monitor, orientation):
     )
 
 
-def open_eventfile(args):
+def open_eventfile(args, file='/dev/input/event0'):
     """ssh to reMarkable and open event0"""
 
     if args.key is not None:
@@ -85,7 +85,7 @@ def open_eventfile(args):
     print("Connected to {}".format(args.address))
 
     # Start reading events
-    _, stdout, _ = client.exec_command('cat /dev/input/event0')
+    _, stdout, _ = client.exec_command('cat ' + file)
 
     return stdout
 
