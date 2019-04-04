@@ -72,6 +72,9 @@ def open_eventfile(args, file='/dev/input/event0'):
                 os.path.expanduser(args.key),
                 password=passphrase
             )
+    elif args.password:
+        password = args.password
+        pkey = None
     else:
         password = getpass(
             "Password for '{}': ".format(args.address)
