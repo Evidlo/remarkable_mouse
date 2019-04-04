@@ -57,7 +57,7 @@ def fit(x, y, stylus_width, stylus_height, monitor, orientation):
     )
 
 
-def open_eventfile(args):
+def open_eventfile(args, file='/dev/input/event0'):
     """ssh to reMarkable and open event0"""
 
     if args.key is not None:
@@ -90,7 +90,7 @@ def open_eventfile(args):
     print("Connected to {}".format(args.address))
 
     # Start reading events
-    _, stdout, _ = client.exec_command('cat /dev/input/event0')
+    _, stdout, _ = client.exec_command('cat ' + file)
 
     return stdout
 
@@ -112,19 +112,19 @@ def read_tablet(args):
 
             # handle x direction
             if e_code == e_code_stylus_xpos:
-                log.debug(f'{e_value}')
+                log.debug(e_value)
                 x = e_value
                 new_x = True
 
             # handle y direction
             if e_code == e_code_stylus_ypos:
-                log.debug(f'\t{e_value}')
+                log.debug('\t{}'.format(e_value))
                 y = e_value
                 new_y = True
 
             # handle draw
             if e_code == e_code_stylus_pressure:
-                log.debug(f'\t\t{e_value}')
+                log.debug('\t\t{}'.format(e_value))
                 if e_value > args.threshold:
                     mouse.press(Button.left)
                 else:
