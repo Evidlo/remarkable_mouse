@@ -9,7 +9,7 @@ import sys
 import struct
 from getpass import getpass
 import paramiko
-from screeninfo import get_monitors
+from screeninfo import Monitor, get_monitors
 from pynput.mouse import Button, Controller
 
 # evtype_sync = 0
@@ -103,7 +103,16 @@ def read_tablet(args):
 
     new_x = new_y = False
 
-    monitor = get_monitors()[args.monitor]
+
+    if args.screensize is not None:
+        monitor = Monitor(
+            x=args.screenoffset[0],
+            y=args.screenoffset[1],
+            width=args.screensize[0],
+            height=args.screensize[1]
+        )
+    else:
+        monitor = get_monitors()[args.monitor]
     log.debug('Chose monitor: {}'.format(monitor))
 
     stdout = open_eventfile(args)
@@ -148,6 +157,8 @@ def main():
         parser = argparse.ArgumentParser(description="use reMarkable tablet as a mouse input")
         parser.add_argument('--orientation', default='left', choices=['vertical', 'left', 'right'])
         parser.add_argument('--monitor', default=0, type=int, metavar='NUM', help="monitor to use")
+        parser.add_argument('--screensize', default=None, type=int, metavar=('width', 'height'), nargs=2, help="set monitor size to bypass autodetect")
+        parser.add_argument('--screenoffset', default=(0, 0), type=int, metavar=('x', 'y'), nargs=2, help="set monitor origin (only used if screensize is set)")
         parser.add_argument('--offset', default=(0, 0), type=int, metavar=('x', 'y'), nargs=2, help="offset mapped region on monitor")
         parser.add_argument('--debug', action='store_true', default=False, help="enable debug messages")
         parser.add_argument('--key', type=str, metavar='PATH', help="ssh private key")
