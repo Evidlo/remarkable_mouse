@@ -20,8 +20,7 @@ setup(
     },
     install_requires=[
         'paramiko',
-        'screeninfo',
-        'pynput'
+        'libevdev'
     ],
     classifiers=[
         "Programming Language :: Python :: 3",
