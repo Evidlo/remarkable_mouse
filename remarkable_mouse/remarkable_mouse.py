@@ -35,10 +35,6 @@ mouse = Controller()
 logging.basicConfig(format='%(message)s')
 log = logging.getLogger(__name__)
 
-# mouse state
-LIFTED = 0
-PRESSED = 1
-
 
 # remap wacom coordinates in various orientations
 def fit(x, y, stylus_width, stylus_height, monitor, orientation):
@@ -105,9 +101,9 @@ def open_eventfile(args, file='/dev/input/event0'):
 def read_tablet(args):
     """Loop forever and map evdev events to mouse"""
 
-    state = LIFTED
     new_x = new_y = False
-
+    is_pressing = False
+    resetted = True
     monitor = get_monitors()[args.monitor]
     log.debug('Chose monitor: {}'.format(monitor))
 
@@ -133,17 +129,14 @@ def read_tablet(args):
             # handle draw
             if e_code == e_code_stylus_pressure:
                 log.debug('\t\t{}'.format(e_value))
-                if e_value > args.threshold:
-                    if state == LIFTED:
-                        log.info('PRESS')
-                        state = PRESSED
-                        mouse.press(Button.left)
-                else:
-                    if state == PRESSED:
-                        log.info('RELEASE')
-                        state = LIFTED
-                        mouse.release(Button.left)
-
+                if e_value > args.threshold and is_pressing == False and resetted:
+                    mouse.press(Button.left)
+                    is_pressing = True
+                    resetted = False
+                if e_value <= 100 and not resetted:
+                    resetted = True
+                    mouse.release(Button.left)
+                    is_pressing = False
 
             # only move when x and y are updated for smoother mouse
             if new_x and new_y:
