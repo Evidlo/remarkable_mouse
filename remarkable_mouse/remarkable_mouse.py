@@ -10,7 +10,8 @@ import struct
 from getpass import getpass
 import paramiko
 from screeninfo import get_monitors
-from pynput.mouse import Button, Controller
+
+import uinput
 
 # evtype_sync = 0
 # evtype_key = 1
@@ -31,13 +32,8 @@ stylus_height = 20951
 # finger_width = 767
 # finger_height = 1023
 
-mouse = Controller()
 logging.basicConfig(format='%(message)s')
 log = logging.getLogger(__name__)
-
-# mouse state
-LIFTED = 0
-PRESSED = 1
 
 
 # remap wacom coordinates in various orientations
@@ -56,8 +52,8 @@ def fit(x, y, stylus_width, stylus_height, monitor, orientation):
     scaling = ratio_width if ratio_width > ratio_height else ratio_height
 
     return (
-        scaling * (x - (stylus_width - monitor.width / scaling) / 2),
-        scaling * (y - (stylus_height - monitor.height / scaling) / 2)
+        round(scaling * (x - (stylus_width - monitor.width / scaling) / 2)),
+        round(scaling * (y - (stylus_height - monitor.height / scaling) / 2))
     )
 
 
@@ -105,54 +101,60 @@ def open_eventfile(args, file='/dev/input/event0'):
 def read_tablet(args):
     """Loop forever and map evdev events to mouse"""
 
-    state = LIFTED
     new_x = new_y = False
+    x,y,pressure = 0,0,0
 
     monitor = get_monitors()[args.monitor]
     log.debug('Chose monitor: {}'.format(monitor))
 
     stdout = open_eventfile(args)
 
-    while True:
-        _, _, e_type, e_code, e_value = struct.unpack('2IHHi', stdout.read(16))
+    events = (
+        uinput.ABS_X + (0, monitor.width, 0, 0),
+        uinput.ABS_Y + (0, monitor.height, 0, 0),
+        uinput.ABS_PRESSURE + (0, 4096, 0, 0),
+        uinput.BTN_TOUCH,
+        )
 
-        if e_type == e_type_abs:
+    with uinput.Device(events, name="reMarkable") as device:
 
-            # handle x direction
-            if e_code == e_code_stylus_xpos:
-                log.debug(e_value)
-                x = e_value
-                new_x = True
+        while True:
+            _, _, e_type, e_code, e_value = struct.unpack('2IHHi', stdout.read(16))
 
-            # handle y direction
-            if e_code == e_code_stylus_ypos:
-                log.debug('\t{}'.format(e_value))
-                y = e_value
-                new_y = True
+            if e_type == e_type_abs:
 
-            # handle draw
-            if e_code == e_code_stylus_pressure:
-                log.debug('\t\t{}'.format(e_value))
-                if e_value > args.threshold:
-                    if state == LIFTED:
-                        log.info('PRESS')
-                        state = PRESSED
-                        mouse.press(Button.left)
-                else:
-                    if state == PRESSED:
-                        log.info('RELEASE')
-                        state = LIFTED
-                        mouse.release(Button.left)
+                # handle x direction
+                if e_code == e_code_stylus_xpos:
+                    log.debug(e_value)
+                    x = e_value
+                    new_x = True
 
+                # handle y direction
+                if e_code == e_code_stylus_ypos:
+                    log.debug('\t{}'.format(e_value))
+                    y = e_value
+                    new_y = True
 
-            # only move when x and y are updated for smoother mouse
-            if new_x and new_y:
-                mapped_x, mapped_y = fit(x, y, stylus_width, stylus_height, monitor, args.orientation)
-                mouse.move(
-                    monitor.x + mapped_x - mouse.position[0],
-                    monitor.y + mapped_y - mouse.position[1]
-                )
-                new_x = new_y = False
+                # handle draw
+                if e_code == e_code_stylus_pressure:
+                    log.debug('\t\t{}'.format(e_value))
+                    pressure = e_value
+                    device.emit(uinput.ABS_PRESSURE, pressure)
+                    if e_value > args.threshold:
+                        device.emit_click(uinput.BTN_TOUCH)
+
+                # only move when x and y are updated for smoother mouse
+                if new_x and new_y:
+                    mapped_x, mapped_y = fit(x, y, stylus_width, stylus_height, monitor, args.orientation)
+
+                    device.emit(uinput.ABS_X,
+                        monitor.x + mapped_x,
+                        syn=False)
+                    device.emit(uinput.ABS_Y,
+                        monitor.y + mapped_y)
+                    
+
+                    new_x = new_y = False
 
 def main():
 
@@ -165,7 +167,7 @@ def main():
         parser.add_argument('--key', type=str, metavar='PATH', help="ssh private key")
         parser.add_argument('--password', default=None, type=str, help="ssh password")
         parser.add_argument('--address', default='10.11.99.1', type=str, help="device address")
-        parser.add_argument('--threshold', default=1000, type=int, help="stylus pressure threshold (default 1000)")
+        parser.add_argument('--threshold', default=100, type=int, help="stylus pressure threshold (default 1000)")
 
         args = parser.parse_args()
 
