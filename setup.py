@@ -9,6 +9,7 @@ setup(
     author_email="evan@evanw.org",
     description="use reMarkable as a graphics tablet",
     long_description=open('README.md').read(),
+    long_description_content_type='text/markdown',
     license="GPLv3",
     keywords="remarkable tablet evdev",
     url="https://github.com/evidlo/remarkable_mouse",
