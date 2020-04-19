@@ -27,28 +27,61 @@ stylus_height = 20951
 # remap wacom coordinates in various orientations
 def fit(x, y, stylus_width, stylus_height, monitor, orientation):
 
-    if orientation == 'vertical':
+    if orientation == "vertical":
         y = stylus_height - y
-    elif orientation == 'right':
+    elif orientation == "right":
         x, y = y, x
         stylus_width, stylus_height = stylus_height, stylus_width
-    elif orientation == 'left':
+    elif orientation == "left":
         x, y = stylus_height - y, stylus_width - x
         stylus_width, stylus_height = stylus_height, stylus_width
 
-    ratio_width, ratio_height = monitor.width / stylus_width, monitor.height / stylus_height
+    ratio_width, ratio_height = (
+        monitor.width / stylus_width,
+        monitor.height / stylus_height,
+    )
     scaling = ratio_width if ratio_width > ratio_height else ratio_height
 
     return (
         scaling * (x - (stylus_width - monitor.width / scaling) / 2),
-        scaling * (y - (stylus_height - monitor.height / scaling) / 2)
+        scaling * (y - (stylus_height - monitor.height / scaling) / 2),
     )
+
+
+def get_monitor(monitor_number):
+    from screeninfo import get_monitors, Monitor
+    import sys
+
+    if sys.platform == "darwin":
+        from AppKit import NSScreen
+
+    for s in NSScreen.screens():
+        if sys.platform == "darwin":
+            screens = [
+                (
+                    s.frame().origin.x,
+                    s.frame().origin.y,
+                    s.frame().size.width,
+                    s.frame().size.height,
+                )
+                for s in NSScreen.screens()
+            ]
+
+            monitor = Monitor(
+                x=screens[monitor_number][0],
+                y=screens[monitor_number][1],
+                width=screens[monitor_number][2],
+                height=screens[monitor_number][3],
+            )
+        else:
+            monitor = get_monitors()[args.monitor]
+
+    return monitor
 
 
 def read_tablet(args, remote_device):
     """Loop forever and map evdev events to mouse"""
 
-    from screeninfo import get_monitors
     from pynput.mouse import Button, Controller
 
     lifted = True
@@ -56,7 +89,7 @@ def read_tablet(args, remote_device):
 
     mouse = Controller()
 
-    monitor = get_monitors()[args.monitor]
+    monitor = get_monitor(args.monitor)
     log.debug('Chose monitor: {}'.format(monitor))
 
     while True:
