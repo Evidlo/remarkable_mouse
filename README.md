@@ -19,12 +19,15 @@ By default, `10.11.99.1` is used as the address.  Seems to work pretty well wire
 
 # Examples
 
-``` bash
-# specify address, monitor, orientation, password
-remouse --address 192.168.1.1 --orientation right --monitor 1 --password foobar
+specify address, monitor, orientation, password
 
-# pubkey login
-ssh-keygen -f ~/.ssh/remarkable -N ''
+``` bash
+remouse --address 192.168.1.1 --orientation right --monitor 1 --password foobar
+```
+passwordless login
+
+``` bash
+ssh-keygen -m PEM -t rsa -f ~/.ssh/remarkable -N ''
 ssh-copy-id -i ~/.ssh/remarkable.pub root@10.11.99.1
 remouse --key ~/.ssh/remarkable
 ```
