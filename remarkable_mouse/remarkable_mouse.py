@@ -61,6 +61,8 @@ def open_remote_device(args, file='/dev/input/event0'):
     # Start reading events
     _, stdout, _ = client.exec_command('cat ' + file)
 
+    print("connected to", args.address)
+
     return stdout
 
 
