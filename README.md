@@ -4,7 +4,7 @@ Use your reMarkable as a graphics tablet.
 
 Special thanks to [canselcik](https://github.com/canselcik/libremarkable) and [LinusCDE](https://github.com/LinusCDE/rmWacomToMouse) for inspiration.
 
-<img src="photo.gif" width=500>
+<img src="photo.gif" width=800>
 
 # Quick Start
 
