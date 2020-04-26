@@ -25,7 +25,7 @@ stylus_height = 20951
 
 
 # remap wacom coordinates in various orientations
-def fit(x, y, stylus_width, stylus_height, monitor, orientation):
+def remap(x, y, stylus_width, stylus_height, monitor, orientation, mode):
 
     if orientation == 'vertical':
         y = stylus_height - y
@@ -37,7 +37,11 @@ def fit(x, y, stylus_width, stylus_height, monitor, orientation):
         stylus_width, stylus_height = stylus_height, stylus_width
 
     ratio_width, ratio_height = monitor.width / stylus_width, monitor.height / stylus_height
-    scaling = ratio_width if ratio_width > ratio_height else ratio_height
+
+    if mode == 'fill':
+        scaling = max(ratio_width, ratio_height)
+    else:
+        scaling = min(ratio_width, ratio_height)
 
     return (
         scaling * (x - (stylus_width - monitor.width / scaling) / 2),
@@ -93,7 +97,12 @@ def read_tablet(args, remote_device):
 
             # only move when x and y are updated for smoother mouse
             if new_x and new_y:
-                mapped_x, mapped_y = fit(x, y, stylus_width, stylus_height, monitor, args.orientation)
+                mapped_x, mapped_y = remap(
+                    x, y,
+                    stylus_width, stylus_height,
+                    monitor, args.orientation,
+                    args.mode
+                )
                 mouse.move(
                     monitor.x + mapped_x - mouse.position[0],
                     monitor.y + mapped_y - mouse.position[1]
