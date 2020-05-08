@@ -1,5 +1,6 @@
 import logging
 import struct
+from screeninfo import get_monitors
 
 logging.basicConfig(format='%(message)s')
 log = logging.getLogger(__name__)
@@ -40,23 +41,24 @@ def remap(x, y, wacom_width, wacom_height, monitor_width, monitor_height, mode, 
     elif orientation == 'top':
         x = wacom_width - x
 
-    ratio_width, ratio_height = monitor.width / wacom_width, monitor.height / wacom_height
+    ratio_width, ratio_height = monitor_width / wacom_width, monitor_height / wacom_height
 
-    if mode == 'fill':
+    if mode == 'fit':
         scaling = max(ratio_width, ratio_height)
-    else:
+    elif mode == 'fill':
         scaling = min(ratio_width, ratio_height)
+    else:
+        raise NotImplementedError
 
     return (
-        scaling * (x - (wacom_width - monitor.width / scaling) / 2),
-        scaling * (y - (wacom_height - monitor.height / scaling) / 2)
+        scaling * (x - (wacom_width - monitor_width / scaling) / 2),
+        scaling * (y - (wacom_height - monitor_height / scaling) / 2)
     )
 
 
 def read_tablet(args, remote_device):
     """Loop forever and map evdev events to mouse"""
 
-    from screeninfo import get_monitors
     from pynput.mouse import Button, Controller
 
     lifted = True
@@ -104,8 +106,8 @@ def read_tablet(args, remote_device):
                 mapped_x, mapped_y = remap(
                     x, y,
                     wacom_width, wacom_height,
-                    monitor, args.orientation,
-                    args.mode
+                    monitor.width, monitor.height,
+                    args.mode, args.orientation
                 )
                 mouse.move(
                     monitor.x + mapped_x - mouse.position[0],
