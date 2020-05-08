@@ -25,8 +25,8 @@ def create_local_device():
     # Set device properties to emulate those of Wacom tablets
     device.name = 'reMarkable tablet'
     device.id = {
-        'bustype': 24,
-        'vendor': 1386,
+        'bustype': 0x18, # i2c
+        'vendor': 0x056a, # wacom
         'product': 0,
         'version': 54
     }
