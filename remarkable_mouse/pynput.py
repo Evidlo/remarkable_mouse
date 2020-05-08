@@ -19,17 +19,15 @@ e_code_stylus_pressure = 24
 # evcode_finger_pressure = 58
 
 # wacom digitizer dimensions
-# FIXME - I found these limits experimentally.  We can probably get the
-#    exact values off the filesystem somewhere
 wacom_width = 15725
-wacom_height = 20951
+wacom_height = 20967
 # touchscreen dimensions
 # finger_width = 767
 # finger_height = 1023
 
 
 # remap wacom coordinates in various orientations
-def remap(x, y, wacom_width, wacom_height, monitor, orientation, mode):
+def remap(x, y, wacom_width, wacom_height, monitor_width, monitor_height, mode, orientation=None):
 
     if orientation == 'bottom':
         y = wacom_height - y
