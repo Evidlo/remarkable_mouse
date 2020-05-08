@@ -85,7 +85,7 @@ def main():
         parser.add_argument('--password', default=None, type=str, help="ssh password")
         parser.add_argument('--address', default='10.11.99.1', type=str, help="device address")
         parser.add_argument('--mode', default='fit', choices=['fit', 'fill'])
-        parser.add_argument('--orientation', default='left', choices=['vertical', 'left', 'right'])
+        parser.add_argument('--orientation', default='right', choices=['top', 'left', 'right', 'bottom'], help="position of tablet buttons")
         parser.add_argument('--monitor', default=0, type=int, metavar='NUM', help="monitor to use")
         parser.add_argument('--threshold', default=1000, type=int, help="stylus pressure threshold (default 1000)")
         parser.add_argument('--evdev', action='store_true', default=False, help="use evdev to support pen tilt (requires root, no OSX support)")
