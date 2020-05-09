@@ -10,6 +10,7 @@ import struct
 from getpass import getpass
 
 import paramiko
+import paramiko.agent
 
 logging.basicConfig(format='%(message)s')
 log = logging.getLogger(__name__)
@@ -27,6 +28,14 @@ def open_remote_device(args, file='/dev/input/event0'):
     """
     log.info("Connecting to input '{}' on '{}'".format(file, args.address))
 
+    client = paramiko.SSHClient()
+    client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+
+    pkey = None
+    password = None
+
+    agent = paramiko.agent.Agent()
+
     if args.key is not None:
         password = None
         try:
@@ -42,14 +51,12 @@ def open_remote_device(args, file='/dev/input/event0'):
     elif args.password:
         password = args.password
         pkey = None
-    else:
+    elif not agent.get_keys():
         password = getpass(
             "Password for '{}': ".format(args.address)
         )
         pkey = None
 
-    client = paramiko.SSHClient()
-    client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     client.connect(
         args.address,
         username='root',
@@ -57,6 +64,10 @@ def open_remote_device(args, file='/dev/input/event0'):
         pkey=pkey,
         look_for_keys=False
     )
+
+    session = client.get_transport().open_session()
+
+    paramiko.agent.AgentRequestHandler(session)
 
     # Start reading events
     _, stdout, _ = client.exec_command('cat ' + file)
