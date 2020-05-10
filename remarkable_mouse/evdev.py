@@ -22,13 +22,21 @@ def create_local_device():
     import libevdev
     device = libevdev.Device()
 
-    # Set device properties to emulate those of Wacom tablets
-    device.name = 'reMarkable tablet'
+    # Set device properties to emulate those of Wacom tablet.
+    # "pen" or "wacom" must be in the name or gdk will treat us as a TOUCHSCREEN device
+    # rather than a PEN device.
+    #
+    # Then "Mutter", which is responsible for doing the input mapping will silently
+    # refuse to map our device when requested in gnome-control-center
+    #
+    # (see https://gitlab.gnome.org/GNOME/gtk/blob/master/gdk/x11/gdkdevicemanager-xi2.c)
+    # (See https://gitlab.gnome.org/GNOME/mutter/-/blob/master/src/backends/meta-input-settings.c)
+    device.name = 'reMarkable pen' # keep "pen" !
     device.id = {
-        'bustype': 0x18, # i2c
-        'vendor': 0x056a, # wacom
-        'product': 0,
-        'version': 54
+        'bustype': 0x03,   # usb though this is pretend and only for matching
+        'vendor':  0x056a, # wacom since input systems will look for this and match x driver
+        'product': 0x04,   # no collision https://www.the-sz.com/products/usbid/index.php?v=0x056A
+        'version': 0       # I don't think this matters
     }
 
     # Enable buttons supported by the digitizer
