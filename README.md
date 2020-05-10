@@ -52,3 +52,8 @@ remouse --key ~/.ssh/remarkable
                             stylus pressure threshold (default 1000)
       --evdev               use evdev to support pen tilt (requires root, no OSX
                         support)
+
+# Integration
+
+To get gnome control center to treat remarkable-mouse as a wacom tablet, copy [remarkable.tablet](./remarkable.tablet) into `/usr/share/libwacom/`
+Once copied, `libwacom-list-local-devices` should show `'reMarkable tablet 1'` whenever `remarkable-mouse` is running using the `--evdev` option. `gnome-control-center` (aka gnome settings) will show remarkable in `Devices > Wacom Tablet` and allow you to easily map to a monitor, change the rotation, etc.
