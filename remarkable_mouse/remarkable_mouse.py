@@ -84,7 +84,7 @@ def main():
         parser.add_argument('--key', type=str, metavar='PATH', help="ssh private key")
         parser.add_argument('--password', default=None, type=str, help="ssh password")
         parser.add_argument('--address', default='10.11.99.1', type=str, help="device address")
-        parser.add_argument('--mode', default='fit', choices=['fit', 'fill'], help="scale setting")
+        parser.add_argument('--mode', default='fill', choices=['fit', 'fill'], help="scale setting")
         parser.add_argument('--orientation', default='right', choices=['top', 'left', 'right', 'bottom'], help="position of tablet buttons")
         parser.add_argument('--monitor', default=0, type=int, metavar='NUM', help="monitor to output to")
         parser.add_argument('--threshold', metavar='THRESH', default=600, type=int, help="stylus pressure threshold (default 600)")
