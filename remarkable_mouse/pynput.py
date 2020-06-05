@@ -1,5 +1,6 @@
 import logging
 import struct
+from screeninfo import get_monitors
 
 logging.basicConfig(format='%(message)s')
 log = logging.getLogger(__name__)
@@ -18,41 +19,47 @@ e_code_stylus_pressure = 24
 # evcode_finger_ypos = 54
 # evcode_finger_pressure = 58
 
-stylus_width = 15725
-stylus_height = 20951
+# wacom digitizer dimensions
+wacom_width = 15725
+wacom_height = 20967
+# touchscreen dimensions
 # finger_width = 767
 # finger_height = 1023
 
 
-# remap wacom coordinates in various orientations
-def remap(x, y, stylus_width, stylus_height, monitor, orientation, mode):
+# remap wacom coordinates to screen coordinates
+def remap(x, y, wacom_width, wacom_height, monitor_width,
+          monitor_height, mode, orientation):
 
-    if orientation == 'vertical':
-        y = stylus_height - y
+    if orientation == 'bottom':
+        y = wacom_height - y
     elif orientation == 'right':
-        x, y = y, x
-        stylus_width, stylus_height = stylus_height, stylus_width
+        x, y = wacom_height - y, wacom_width - x
+        wacom_width, wacom_height = wacom_height, wacom_width
     elif orientation == 'left':
-        x, y = stylus_height - y, stylus_width - x
-        stylus_width, stylus_height = stylus_height, stylus_width
+        x, y = y, x
+        wacom_width, wacom_height = wacom_height, wacom_width
+    elif orientation == 'top':
+        x = wacom_width - x
 
-    ratio_width, ratio_height = monitor.width / stylus_width, monitor.height / stylus_height
+    ratio_width, ratio_height = monitor_width / wacom_width, monitor_height / wacom_height
 
     if mode == 'fill':
         scaling = max(ratio_width, ratio_height)
-    else:
+    elif mode == 'fit':
         scaling = min(ratio_width, ratio_height)
+    else:
+        raise NotImplementedError
 
     return (
-        scaling * (x - (stylus_width - monitor.width / scaling) / 2),
-        scaling * (y - (stylus_height - monitor.height / scaling) / 2)
+        scaling * (x - (wacom_width - monitor_width / scaling) / 2),
+        scaling * (y - (wacom_height - monitor_height / scaling) / 2)
     )
 
 
 def read_tablet(args, remote_device):
     """Loop forever and map evdev events to mouse"""
 
-    from screeninfo import get_monitors
     from pynput.mouse import Button, Controller
 
     lifted = True
@@ -99,9 +106,9 @@ def read_tablet(args, remote_device):
             if new_x and new_y:
                 mapped_x, mapped_y = remap(
                     x, y,
-                    stylus_width, stylus_height,
-                    monitor, args.orientation,
-                    args.mode
+                    wacom_width, wacom_height,
+                    monitor.width, monitor.height,
+                    args.mode, args.orientation
                 )
                 mouse.move(
                     monitor.x + mapped_x - mouse.position[0],

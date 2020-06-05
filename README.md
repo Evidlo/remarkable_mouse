@@ -22,7 +22,7 @@ By default, `10.11.99.1` is used as the address. Seems to work pretty well wirel
 specify address, monitor, orientation, password
 
 ``` bash
-remouse --address 192.168.1.1 --orientation right --monitor 1 --password foobar
+remouse --address 192.168.1.1 --orientation right --mode fit --monitor 1 --password foobar
 ```
 passwordless login
 
@@ -35,8 +35,9 @@ remouse --key ~/.ssh/remarkable
 # Usage
 
     usage: remouse [-h] [--debug] [--key PATH] [--password PASSWORD]
-               [--address ADDRESS] [--orientation {vertical,left,right}]
-               [--monitor NUM] [--threshold THRESHOLD] [--evdev]
+                  [--address ADDRESS] [--mode {fit,fill}]
+                  [--orientation {top,left,right,bottom}] [--monitor NUM]
+                  [--threshold THRESH] [--evdev]
 
     use reMarkable tablet as a mouse input
 
@@ -46,12 +47,13 @@ remouse --key ~/.ssh/remarkable
       --key PATH            ssh private key
       --password PASSWORD   ssh password
       --address ADDRESS     device address
-      --orientation {vertical,left,right}
-      --monitor NUM         monitor to use
-      --threshold THRESHOLD
-                            stylus pressure threshold (default 1000)
-      --evdev               use evdev to support pen tilt (requires root, no OSX
-                        support)
+      --mode {fit,fill}     scale setting
+      --orientation {top,left,right,bottom}
+                            position of tablet buttons
+      --monitor NUM         monitor to output to
+      --threshold THRESH    stylus pressure threshold (default 600)
+      --evdev               use evdev to support pen pressure (requires root,
+                            Linux only)
 
 # Integration
 
