@@ -1,4 +1,3 @@
-#!/bin/env python
 # Evan Widloski - 2019-02-23
 # Use reMarkable as mouse input
 
