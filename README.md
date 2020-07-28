@@ -8,7 +8,7 @@ Special thanks to [canselcik](https://github.com/canselcik/libremarkable) and [L
 
 # Quick Start
 
-On the host machine
+On the host machine with the tablet plugged in via USB:
 
 ``` bash
 pip install remarkable-mouse
