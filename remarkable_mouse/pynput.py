@@ -60,6 +60,8 @@ def remap(x, y, wacom_width, wacom_height, monitor_width,
 def read_tablet(args, remote_device):
     """Loop forever and map evdev events to mouse"""
 
+    import keyboard
+          
     from pynput.mouse import Button, Controller
 
     lifted = True
@@ -73,7 +75,16 @@ def read_tablet(args, remote_device):
     while True:
         _, _, e_type, e_code, e_value = struct.unpack('2IHHi', remote_device.read(16))
 
-        if e_type == e_type_abs:
+        if keyboard.is_pressed('alt+1'):
+            monitor = get_monitors()[0]
+
+        elif keyboard.is_pressed('alt+2'):
+            monitor = get_monitors()[1]
+
+        elif keyboard.is_pressed('alt+3'):
+            monitor = get_monitors()[2]
+
+        elif e_type == e_type_abs:
 
             # handle x direction
             if e_code == e_code_stylus_xpos:
@@ -87,16 +98,38 @@ def read_tablet(args, remote_device):
                 y = e_value
                 new_y = True
 
-            # handle draw
+            # handle draw & modifiers
             if e_code == e_code_stylus_pressure:
                 log.debug('\t\t{}'.format(e_value))
                 if e_value > args.threshold:
-                    if lifted:
+                    if lifted and keyboard.is_pressed('ctrl') :
+                        lifted = False
+                        Rlifted = False
+                        keyboard.block_key('ctrl')
+                        keyboard.release('ctrl')
+                        mouse.press(Button.right)
+                    if lifted and keyboard.is_pressed('shift') :
+                        lifted = False
+                        Mlifted = False
+                        keyboard.block_key('shift')
+                        keyboard.release('shift')
+                        mouse.press(Button.middle)
+                    elif lifted:
                         log.debug('PRESS')
                         lifted = False
                         mouse.press(Button.left)
                 else:
-                    if not lifted:
+                    if not lifted and not Rlifted :
+                        lifted = True
+                        Rlifted = True
+                        mouse.release(Button.right)
+                        keyboard.unblock_key('ctrl')
+                    if not lifted and not Mlifted :
+                        lifted = True
+                        Mlifted = True
+                        mouse.release(Button.middle)
+                        keyboard.unblock_key('shift')
+                    elif not lifted :
                         log.debug('RELEASE')
                         lifted = True
                         mouse.release(Button.left)
