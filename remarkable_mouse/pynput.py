@@ -65,6 +65,9 @@ def read_tablet(args, remote_device):
     from pynput.mouse import Button, Controller
 
     lifted = True
+    Rlifted = True
+    Mlifted = True
+
     new_x = new_y = False
 
     mouse = Controller()
