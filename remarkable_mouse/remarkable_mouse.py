@@ -88,10 +88,9 @@ def main():
         parser.add_argument('--monitor', default=0, type=int, metavar='NUM', help="monitor to output to")
         parser.add_argument('--threshold', metavar='THRESH', default=600, type=int, help="stylus pressure threshold (default 600)")
         parser.add_argument('--evdev', action='store_true', default=False, help="use evdev to support pen pressure (requires root, Linux only)")
+        parser.add_argument('--event-path', default='/dev/input/event0', type=str, help="on-device path of the event source (/dev/input/event0)")
 
         args = parser.parse_args()
-
-        remote_device = open_remote_device(args)
 
         if args.debug:
             logging.getLogger('').setLevel(logging.DEBUG)
@@ -99,6 +98,8 @@ def main():
             log.info('Debugging enabled...')
         else:
             log.setLevel(logging.INFO)
+
+        remote_device = open_remote_device(args, args.event_path)
 
         if args.evdev:
             from remarkable_mouse.evdev import create_local_device, pipe_device
