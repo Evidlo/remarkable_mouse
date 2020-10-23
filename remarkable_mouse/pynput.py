@@ -71,7 +71,7 @@ def read_tablet(args, remote_device):
     log.debug('Chose monitor: {}'.format(monitor))
 
     while True:
-        _, _, e_type, e_code, e_value = struct.unpack('2IHHi', remote_device.read(16))
+        _, _, e_type, e_code, e_value = struct.unpack('2IHHi', remote_device[0].read(16))
 
         if e_type == e_type_abs:
 
