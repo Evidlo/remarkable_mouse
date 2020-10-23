@@ -69,11 +69,16 @@ def open_remote_device(args, file='/dev/input/event0'):
     paramiko.agent.AgentRequestHandler(session)
 
     # Start reading events
-    _, stdout, _ = client.exec_command('cat ' + file)
+    _, pen, _ = client.exec_command('cat ' + file)
+    _, mt,  _ = client.exec_command('cat /dev/input/event1')
+    _, btn, _ = client.exec_command('cat /dev/input/event2')
+    pen.channel.setblocking(0)
+    mt.channel.setblocking(0)
+    btn.channel.setblocking(0)
 
     print("connected to", args.address)
 
-    return stdout
+    return pen, mt, btn
 
 
 def main():
