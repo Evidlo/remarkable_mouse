@@ -3,6 +3,7 @@ import struct
 import subprocess
 from screeninfo import get_monitors
 import time
+from socket import timeout
 
 logging.basicConfig(format='%(message)s')
 log = logging.getLogger(__name__)
@@ -26,10 +27,10 @@ def create_local_device():
     device = libevdev.Device()
 
     # Set device properties to emulate those of Wacom tablets
-    device.name = 'reMarkable tablet'
+    device.name = 'reMarkable pen'
 
     device.id = {
-        'bustype': 0x18, # i2c
+        'bustype': 0x03, # usb
         'vendor': 0x056a, # wacom
         'product': 0,
         'version': 54
@@ -41,20 +42,93 @@ def create_local_device():
     device.enable(libevdev.EV_KEY.BTN_TOUCH)
     device.enable(libevdev.EV_KEY.BTN_STYLUS)
     device.enable(libevdev.EV_KEY.BTN_STYLUS2)
+    device.enable(libevdev.EV_KEY.KEY_POWER)
+    device.enable(libevdev.EV_KEY.KEY_LEFT)
+    device.enable(libevdev.EV_KEY.KEY_RIGHT)
+    device.enable(libevdev.EV_KEY.KEY_HOME)
+    
+    # Enable Touch input
+    device.enable(
+        libevdev.EV_ABS.ABS_MT_POSITION_X,
+        libevdev.InputAbsInfo(
+            minimum=0,
+            maximum=767,
+            resolution=2531 #?
+        )
+    )
+    device.enable(
+        libevdev.EV_ABS.ABS_MT_POSITION_Y,
+        libevdev.InputAbsInfo(
+            minimum=0,
+            maximum=1023,
+            resolution=2531 #?
+        )
+    )
+    device.enable(
+        libevdev.EV_ABS.ABS_MT_PRESSURE,
+        libevdev.InputAbsInfo(
+            minimum=0,
+            maximum=255
+        )
+    )
+    device.enable(
+        libevdev.EV_ABS.ABS_MT_TOUCH_MAJOR,
+        libevdev.InputAbsInfo(
+            minimum=0,
+            maximum=255
+        )
+    )
+    device.enable(
+        libevdev.EV_ABS.ABS_MT_TOUCH_MINOR,
+        libevdev.InputAbsInfo(
+            minimum=0,
+            maximum=255
+        )
+    )
+    device.enable(
+        libevdev.EV_ABS.ABS_MT_ORIENTATION,
+        libevdev.InputAbsInfo(
+            minimum=-127,
+            maximum=127
+        )
+    )
+    device.enable(
+        libevdev.EV_ABS.ABS_MT_SLOT,
+        libevdev.InputAbsInfo(
+            minimum=0,
+            maximum=31
+        )
+    )
+    device.enable(
+        libevdev.EV_ABS.ABS_MT_TOOL_TYPE,
+        libevdev.InputAbsInfo(
+            minimum=0,
+            maximum=1
+        )
+    )
+    device.enable(
+        libevdev.EV_ABS.ABS_MT_TRACKING_ID,
+        libevdev.InputAbsInfo(
+            minimum=0,
+            maximum=65535
+        )
+    )
 
-    # Enable position, tilt, distance and pressure change events
+    # Enable pen input, tilt and pressure
     device.enable(
         libevdev.EV_ABS.ABS_X,
         libevdev.InputAbsInfo(
             minimum=0,
-            maximum=MAX_ABS_X
+            maximum=MAX_ABS_X,
+            resolution=2531
         )
     )
     device.enable(
         libevdev.EV_ABS.ABS_Y,
         libevdev.InputAbsInfo(
             minimum=0,
-            maximum=MAX_ABS_Y
+            maximum=MAX_ABS_Y,
+            resolution=2531
         )
     )
     device.enable(
@@ -127,7 +201,7 @@ def pipe_device(args, remote_device, local_device):
     # set orientation with xinput
     orientation = {'left': 0, 'bottom': 1, 'top': 2, 'right': 3}[args.orientation]
     result = subprocess.run(
-        'xinput --set-prop "reMarkable tablet stylus" "Wacom Rotation" {}'.format(orientation),
+        'xinput --set-prop "reMarkable pen stylus" "Wacom Rotation" {}'.format(orientation),
         capture_output=True,
         shell=True
     )
@@ -138,7 +212,7 @@ def pipe_device(args, remote_device, local_device):
     monitor = get_monitors()[args.monitor]
     log.debug('Chose monitor: {}'.format(monitor))
     result = subprocess.run(
-        'xinput --map-to-output "reMarkable tablet stylus" {}'.format(monitor.name),
+        'xinput --map-to-output "reMarkable pen stylus" {}'.format(monitor.name),
         capture_output=True,
         shell=True
     )
@@ -147,7 +221,7 @@ def pipe_device(args, remote_device, local_device):
 
     # set stylus pressure
     result = subprocess.run(
-        'xinput --set-prop "reMarkable tablet stylus" "Wacom Pressure Threshold" {}'.format(args.threshold),
+        'xinput --set-prop "reMarkable pen stylus" "Wacom Pressure Threshold" {}'.format(args.threshold),
         capture_output=True,
         shell=True
     )
@@ -169,36 +243,92 @@ def pipe_device(args, remote_device, local_device):
     )
     log.debug("Wacom tablet area: {} {} {} {}".format(min_x, min_y, max_x, max_y))
     result = subprocess.run(
-        'xinput --set-prop "reMarkable tablet stylus" "Wacom Tablet Area" \
+        'xinput --set-prop "reMarkable pen stylus" "Wacom Tablet Area" \
         {} {} {} {}'.format(min_x, min_y, max_x, max_y),
         capture_output=True,
         shell=True
     )
     if result.returncode != 0:
         log.warning("Error setting fit: %s", result.stderr)
+    
+    
+    # set monitor to use
+    monitor = get_monitors()[args.monitor]
+    log.debug('Chose monitor: {}'.format(monitor))
+    result = subprocess.run(
+        'xinput --map-to-output "reMarkable pen touch" {}'.format(monitor.name),
+        capture_output=True,
+        shell=True
+    )
+    if result.returncode != 0:
+        log.warning("Error setting monitor: %s", result.stderr)
+    mt_min_x, mt_min_y = remap(
+        0, 0,
+        767, 1023, monitor.width, monitor.height,
+        args.mode,
+        args.orientation
+    )
+    mt_max_x, mt_max_y = remap(
+        monitor.width, monitor.height,
+        767, 1023, monitor.width, monitor.height,
+        args.mode,
+        args.orientation
+    )
+    orientation = {'top': 0, 'left': 1, 'right': 2, 'bottom': 3}[args.orientation]
+    result = subprocess.run(
+        'xinput --set-prop "reMarkable pen touch" "Wacom Rotation" {}'.format(orientation),
+        capture_output=True,
+        shell=True
+    )
+    if result.returncode != 0:
+        log.warning("Error setting orientation: %s", result.stderr)
+    log.debug("Wacom tablet area: {} {} {} {}".format(mt_min_x, mt_min_y, mt_max_x, mt_max_y))
+    result = subprocess.run(
+        'xinput --set-prop "reMarkable pen touch" "Wacom Tablet Area" \
+        {} {} {} {}'.format(mt_min_x, mt_min_y, mt_max_x, mt_max_y),
+        capture_output=True,
+        shell=True
+    )
+    if result.returncode != 0:
+        log.warning("Error setting fit: %s", result.stderr)
+
 
     import libevdev
 
     # While debug mode is active, we log events grouped together between
     # SYN_REPORT events. Pending events for the next log are stored here
     pending_events = []
+    pen_down = 0
 
     while True:
-        e_time, e_millis, e_type, e_code, e_value = struct.unpack('2IHHi', remote_device.read(16))
-        e_bit = libevdev.evbit(e_type, e_code)
-        event = libevdev.InputEvent(e_bit, value=e_value)
+        for device in remote_device:
+            ev = 0
+            try:
+                ev = device.read(16)
+            except timeout:
+                continue
 
-        local_device.send_events([event])
+            e_time, e_millis, e_type, e_code, e_value = struct.unpack('2IHHi', ev)
+            e_bit = libevdev.evbit(e_type, e_code)
+            event = libevdev.InputEvent(e_bit, value=e_value)
+            
+            if e_bit == libevdev.EV_KEY.BTN_TOOL_PEN:
+                pen_down = e_value
 
-        if args.debug:
-            if e_bit == libevdev.EV_SYN.SYN_REPORT:
-                event_repr = ', '.join(
-                    '{} = {}'.format(
-                        event.code.name,
-                        event.value
-                    ) for event in pending_events
-                )
-                log.debug('{}.{:0>6} - {}'.format(e_time, e_millis, event_repr))
-                pending_events = []
+            if pen_down and 'ABS_MT' in event.code.name: # Palm rejection
+                pass
             else:
-                pending_events += [event]
+                local_device.send_events([event])
+
+            if args.debug:
+                if e_bit == libevdev.EV_SYN.SYN_REPORT:
+                    event_repr = ', '.join(
+                        '{} = {}'.format(
+                            event.code.name,
+                            event.value
+                        ) for event in pending_events
+                    )
+                    log.debug('{}.{:0>6} - {}'.format(e_time, e_millis, event_repr))
+                    pending_events = []
+                else:
+                    pending_events += [event]
