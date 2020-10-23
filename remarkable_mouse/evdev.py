@@ -14,6 +14,11 @@ MAX_ABS_X = 20967
 # Maximum value that can be reported by the Wacom driver for the Y axis
 MAX_ABS_Y = 15725
 
+# Maximum value that can be reported by the cyttsp5_mt driver for the X axis
+MT_MAX_ABS_X = 767
+
+# Maximum value that can be reported by the cyttsp5_mt driver for the Y axis
+MT_MAX_ABS_Y = 1023
 
 def create_local_device():
     """
@@ -52,7 +57,7 @@ def create_local_device():
         libevdev.EV_ABS.ABS_MT_POSITION_X,
         libevdev.InputAbsInfo(
             minimum=0,
-            maximum=767,
+            maximum=MT_MAX_ABS_X,
             resolution=2531 #?
         )
     )
@@ -60,7 +65,7 @@ def create_local_device():
         libevdev.EV_ABS.ABS_MT_POSITION_Y,
         libevdev.InputAbsInfo(
             minimum=0,
-            maximum=1023,
+            maximum=MT_MAX_ABS_Y,
             resolution=2531 #?
         )
     )
@@ -185,6 +190,28 @@ def remap(x, y, wacom_width, wacom_height, monitor_width,
         scaling * (y - (monitor_height - wacom_height / scaling) / 2)
     )
 
+# remap screen coordinates to touch coordinates
+def remapTouch(x, y, touch_width, touch_height, monitor_width,
+          monitor_height, mode, orientation=None):
+
+    if orientation in ('left', 'right'):
+        x, y = y, x
+        monitor_width, monitor_height = monitor_height, monitor_width
+
+    ratio_width, ratio_height = touch_width / monitor_width, touch_height / monitor_height
+
+    if mode == 'fit':
+        scaling = max(ratio_width, ratio_height)
+    elif mode == 'fill':
+        scaling = min(ratio_width, ratio_height)
+    else:
+        raise NotImplementedError
+
+    return (
+        scaling * (x - (monitor_width - touch_width / scaling) / 2),
+        scaling * (y - (monitor_height - touch_height / scaling) / 2)
+    )
+
 def pipe_device(args, remote_device, local_device):
     """
     Pipe events from a remote device to a local device.
@@ -262,27 +289,20 @@ def pipe_device(args, remote_device, local_device):
     )
     if result.returncode != 0:
         log.warning("Error setting monitor: %s", result.stderr)
-    mt_min_x, mt_min_y = remap(
+    # Set touch fitting mode
+    mt_min_x, mt_min_y = remapTouch(
         0, 0,
-        767, 1023, monitor.width, monitor.height,
+        MT_MAX_ABS_X, MT_MAX_ABS_Y, monitor.width, monitor.height,
         args.mode,
         args.orientation
     )
-    mt_max_x, mt_max_y = remap(
+    mt_max_x, mt_max_y = remapTouch(
         monitor.width, monitor.height,
-        767, 1023, monitor.width, monitor.height,
+        MT_MAX_ABS_X, MT_MAX_ABS_Y, monitor.width, monitor.height,
         args.mode,
         args.orientation
     )
-    orientation = {'top': 0, 'left': 1, 'right': 2, 'bottom': 3}[args.orientation]
-    result = subprocess.run(
-        'xinput --set-prop "reMarkable pen touch" "Wacom Rotation" {}'.format(orientation),
-        capture_output=True,
-        shell=True
-    )
-    if result.returncode != 0:
-        log.warning("Error setting orientation: %s", result.stderr)
-    log.debug("Wacom tablet area: {} {} {} {}".format(mt_min_x, mt_min_y, mt_max_x, mt_max_y))
+    log.debug("Multi-touch area: {} {} {} {}".format(mt_min_x, mt_min_y, mt_max_x, mt_max_y))
     result = subprocess.run(
         'xinput --set-prop "reMarkable pen touch" "Wacom Tablet Area" \
         {} {} {} {}'.format(mt_min_x, mt_min_y, mt_max_x, mt_max_y),
@@ -291,6 +311,15 @@ def pipe_device(args, remote_device, local_device):
     )
     if result.returncode != 0:
         log.warning("Error setting fit: %s", result.stderr)
+    Log.debug("Multi-touch orientation: {} {} {} {} {} {} 0 0 1".format(0, 1, 0, -1, 0, 1)) # only does -90, need to determine how to calculate other transforms
+    result = subprocess.run(
+        'xinput --set-prop "reMarkable pen touch" "Coordinate Transformation Matrix" \
+        {} {} {} {} {} {} 0 0 1'.format(0, 1, 0, -1, 0, 1),
+        capture_output=True,
+        shell=True
+    )
+    if result.returncode != 0:
+        log.warning("Error setting orientation: %s", result.stderr)
 
 
     import libevdev
