@@ -311,10 +311,9 @@ def pipe_device(args, remote_device, local_device):
     )
     if result.returncode != 0:
         log.warning("Error setting fit: %s", result.stderr)
-    Log.debug("Multi-touch orientation: {} {} {} {} {} {} 0 0 1".format(0, 1, 0, -1, 0, 1)) # only does -90, need to determine how to calculate other transforms
-    result = subprocess.run(
+    result = subprocess.run( # Just need to rotate the touchscreen -90 so that it matches the wacom sensor.
         'xinput --set-prop "reMarkable pen touch" "Coordinate Transformation Matrix" \
-        {} {} {} {} {} {} 0 0 1'.format(0, 1, 0, -1, 0, 1),
+        0 1 0 -1 0 1 0 0 1',
         capture_output=True,
         shell=True
     )
