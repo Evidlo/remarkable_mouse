@@ -47,14 +47,16 @@ def create_local_device():
         libevdev.EV_ABS.ABS_X,
         libevdev.InputAbsInfo(
             minimum=0,
-            maximum=MAX_ABS_X
+            maximum=MAX_ABS_X,
+            resolution=2531
         )
     )
     device.enable(
         libevdev.EV_ABS.ABS_Y,
         libevdev.InputAbsInfo(
             minimum=0,
-            maximum=MAX_ABS_Y
+            maximum=MAX_ABS_Y,
+            resolution=2531
         )
     )
     device.enable(
