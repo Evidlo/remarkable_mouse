@@ -47,10 +47,9 @@ def create_local_device():
     device.enable(libevdev.EV_KEY.BTN_TOUCH)
     device.enable(libevdev.EV_KEY.BTN_STYLUS)
     device.enable(libevdev.EV_KEY.BTN_STYLUS2)
-    device.enable(libevdev.EV_KEY.KEY_POWER)
-    device.enable(libevdev.EV_KEY.KEY_LEFT)
-    device.enable(libevdev.EV_KEY.KEY_RIGHT)
-    device.enable(libevdev.EV_KEY.KEY_HOME)
+    device.enable(libevdev.EV_KEY.BTN_0)
+    device.enable(libevdev.EV_KEY.BTN_1)
+    device.enable(libevdev.EV_KEY.BTN_2)
     
     # Enable Touch input
     device.enable(
@@ -278,17 +277,6 @@ def pipe_device(args, remote_device, local_device):
     if result.returncode != 0:
         log.warning("Error setting fit: %s", result.stderr)
     
-    
-    # set monitor to use
-    monitor = get_monitors()[args.monitor]
-    log.debug('Chose monitor: {}'.format(monitor))
-    result = subprocess.run(
-        'xinput --map-to-output "reMarkable pen touch" {}'.format(monitor.name),
-        capture_output=True,
-        shell=True
-    )
-    if result.returncode != 0:
-        log.warning("Error setting monitor: %s", result.stderr)
     # Set touch fitting mode
     mt_min_x, mt_min_y = remapTouch(
         0, 0,
@@ -312,8 +300,7 @@ def pipe_device(args, remote_device, local_device):
     if result.returncode != 0:
         log.warning("Error setting fit: %s", result.stderr)
     result = subprocess.run( # Just need to rotate the touchscreen -90 so that it matches the wacom sensor.
-        'xinput --set-prop "reMarkable pen touch" "Coordinate Transformation Matrix" \
-        0 1 0 -1 0 1 0 0 1',
+        'xinput --set-prop "reMarkable pen touch" "Coordinate Transformation Matrix" 0 1 0 -1 0 1 0 0 1',
         capture_output=True,
         shell=True
     )
@@ -338,6 +325,14 @@ def pipe_device(args, remote_device, local_device):
 
             e_time, e_millis, e_type, e_code, e_value = struct.unpack('2IHHi', ev)
             e_bit = libevdev.evbit(e_type, e_code)
+
+            if e_bit == libevdev.EV_KEY.KEY_LEFT:
+                e_bit = libevdev.EV_KEY.BTN_0
+            if e_bit == libevdev.EV_KEY.KEY_HOME:
+                e_bit = libevdev.EV_KEY.BTN_1
+            if e_bit == libevdev.EV_KEY.KEY_RIGHT:
+                e_bit = libevdev.EV_KEY.BTN_2
+
             event = libevdev.InputEvent(e_bit, value=e_value)
             
             if e_bit == libevdev.EV_KEY.BTN_TOOL_PEN:
