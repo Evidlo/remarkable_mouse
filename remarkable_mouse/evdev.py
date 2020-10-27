@@ -91,28 +91,6 @@ def create_local_device():
     return device.create_uinput_device()
 
 
-# remap screen coordinates to wacom coordinates
-def remap(x, y, wacom_width, wacom_height, monitor_width,
-          monitor_height, mode, orientation=None):
-
-    if orientation in ('bottom', 'top'):
-        x, y = y, x
-        monitor_width, monitor_height = monitor_height, monitor_width
-
-    ratio_width, ratio_height = wacom_width / monitor_width, wacom_height / monitor_height
-
-    if mode == 'fit':
-        scaling = max(ratio_width, ratio_height)
-    elif mode == 'fill':
-        scaling = min(ratio_width, ratio_height)
-    else:
-        raise NotImplementedError
-
-    return (
-        scaling * (x - (monitor_width - wacom_width / scaling) / 2),
-        scaling * (y - (monitor_height - wacom_height / scaling) / 2)
-    )
-
 def pipe_device(args, remote_device, local_device):
     """
     Pipe events from a remote device to a local device.
@@ -155,29 +133,7 @@ def pipe_device(args, remote_device, local_device):
     )
     if result.returncode != 0:
         log.warning("Error setting pressure threshold: %s", result.stderr)
-
-    # set fitting mode
-    min_x, min_y = remap(
-        0, 0,
-        MAX_ABS_X, MAX_ABS_Y, monitor.width, monitor.height,
-        args.mode,
-        args.orientation
-    )
-    max_x, max_y = remap(
-        monitor.width, monitor.height,
-        MAX_ABS_X, MAX_ABS_Y, monitor.width, monitor.height,
-        args.mode,
-        args.orientation
-    )
-    log.debug("Wacom tablet area: {} {} {} {}".format(min_x, min_y, max_x, max_y))
-    result = subprocess.run(
-        'xinput --set-prop "reMarkable tablet stylus" "Wacom Tablet Area" \
-        {} {} {} {}'.format(min_x, min_y, max_x, max_y),
-        capture_output=True,
-        shell=True
-    )
-    if result.returncode != 0:
-        log.warning("Error setting fit: %s", result.stderr)
+        
 
     import libevdev
 
