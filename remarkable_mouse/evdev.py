@@ -93,11 +93,6 @@ def create_local_device():
 # remap screen coordinates to wacom coordinates
 def remap(wacom_width, wacom_height, monitor_width,
           monitor_height, orientation=None):
-
-    min_x = 0
-    min_y = 0
-    max_x = 0
-    max_y = 0
     
     scale = wacom_width
     if orientation in ('top', 'bottom'):
@@ -109,22 +104,14 @@ def remap(wacom_width, wacom_height, monitor_width,
     min_scale = round(ratio * (0 - screen_ratio / 2))
     max_scale = round(ratio * (monitor_width - screen_ratio / 2))
 
-    min_x = min_scale
-    max_x = max_scale
-    max_y = wacom_height
+    min_x, max_x = min_scale, max_scale
+    min_y, max_y = 0, wacom_height
     
     if orientation in ('top', 'bottom'):
-        min_x = 0
-        min_y = min_scale
-        max_x = wacom_width
-        max_y = max_scale
+        min_x, max_x = 0, wacom_width
+        min_y, max_y = min_scale, max_scale
     
-    return (
-        min_x,
-        min_y,
-        max_x,
-        max_y
-    )
+    return (min_x, min_y, max_x, max_y)
 
 def pipe_device(args, remote_device, local_device):
     """
