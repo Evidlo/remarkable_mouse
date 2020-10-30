@@ -99,10 +99,10 @@ def remap(wacom_width, wacom_height, monitor_width,
         scale = wacom_height
 
     ratio = wacom_height / monitor_height
-    screen_ratio = monitor_width - scale / ratio
+    screen_ratio = monitor_width * ratio
     
-    min_scale = round(ratio * (0 - screen_ratio / 2))
-    max_scale = round(ratio * (monitor_width - screen_ratio / 2))
+    min_scale = round(scale - screen_ratio / 2))
+    max_scale = round(screen_ratio - min_scale)
 
     min_x, max_x = min_scale, max_scale
     min_y, max_y = 0, wacom_height
