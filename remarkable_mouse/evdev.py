@@ -106,8 +106,8 @@ def remap(wacom_width, wacom_height, monitor_width,
     ratio = wacom_height / monitor_height
     screen_ratio = monitor_width - scale / ratio
     
-    min_scale = ratio * (0 - screen_ratio / 2)
-    max_scale = ratio * (monitor_width - screen_ratio / 2)
+    min_scale = round(ratio * (0 - screen_ratio / 2))
+    max_scale = round(ratio * (monitor_width - screen_ratio / 2))
 
     min_x = min_scale
     max_x = max_scale
@@ -177,6 +177,9 @@ def pipe_device(args, remote_device, local_device):
             {} {} {} {}'.format(*coordinates),
             capture_output=True,
             shell=True
+        )
+        if result.returncode != 0:
+            log.warning("Error setting fit: %s", result.stderr)
         
     import libevdev
 
