@@ -3,10 +3,11 @@ import struct
 import subprocess
 from screeninfo import get_monitors
 import time
-from socket import timeout
+from socket import timeout as TimeoutError
+from itertools import cycle
 
 logging.basicConfig(format='%(message)s')
-log = logging.getLogger(__name__)
+log = logging.getLogger('remouse')
 
 # Maximum value that can be reported by the Wacom driver for the X axis
 MAX_ABS_X = 20967
@@ -41,6 +42,8 @@ def create_local_device():
         'version': 54
     }
 
+    # ----- Buttons -----
+
     # Enable buttons supported by the digitizer
     device.enable(libevdev.EV_KEY.BTN_TOOL_PEN)
     device.enable(libevdev.EV_KEY.BTN_TOOL_RUBBER)
@@ -50,125 +53,80 @@ def create_local_device():
     device.enable(libevdev.EV_KEY.BTN_0)
     device.enable(libevdev.EV_KEY.BTN_1)
     device.enable(libevdev.EV_KEY.BTN_2)
-    
+
+    # ----- Touch -----
+
     # Enable Touch input
     device.enable(
         libevdev.EV_ABS.ABS_MT_POSITION_X,
-        libevdev.InputAbsInfo(
-            minimum=0,
-            maximum=MT_MAX_ABS_X,
-            resolution=2531 #?
-        )
+        libevdev.InputAbsInfo(minimum=0, maximum=MT_MAX_ABS_X, resolution=2531) # resolution correct?
     )
     device.enable(
         libevdev.EV_ABS.ABS_MT_POSITION_Y,
-        libevdev.InputAbsInfo(
-            minimum=0,
-            maximum=MT_MAX_ABS_Y,
-            resolution=2531 #?
-        )
+        libevdev.InputAbsInfo(minimum=0, maximum=MT_MAX_ABS_Y, resolution=2531) # resolution correct?
     )
     device.enable(
         libevdev.EV_ABS.ABS_MT_PRESSURE,
-        libevdev.InputAbsInfo(
-            minimum=0,
-            maximum=255
-        )
+        libevdev.InputAbsInfo(minimum=0, maximum=255)
     )
     device.enable(
         libevdev.EV_ABS.ABS_MT_TOUCH_MAJOR,
-        libevdev.InputAbsInfo(
-            minimum=0,
-            maximum=255
-        )
+        libevdev.InputAbsInfo(minimum=0, maximum=255)
     )
     device.enable(
         libevdev.EV_ABS.ABS_MT_TOUCH_MINOR,
-        libevdev.InputAbsInfo(
-            minimum=0,
-            maximum=255
-        )
+        libevdev.InputAbsInfo(minimum=0, maximum=255)
     )
     device.enable(
         libevdev.EV_ABS.ABS_MT_ORIENTATION,
-        libevdev.InputAbsInfo(
-            minimum=-127,
-            maximum=127
-        )
+        libevdev.InputAbsInfo(minimum=-127, maximum=127)
     )
     device.enable(
         libevdev.EV_ABS.ABS_MT_SLOT,
-        libevdev.InputAbsInfo(
-            minimum=0,
-            maximum=31
-        )
+        libevdev.InputAbsInfo(minimum=0, maximum=31)
     )
     device.enable(
         libevdev.EV_ABS.ABS_MT_TOOL_TYPE,
-        libevdev.InputAbsInfo(
-            minimum=0,
-            maximum=1
-        )
+        libevdev.InputAbsInfo(minimum=0, maximum=1)
     )
     device.enable(
         libevdev.EV_ABS.ABS_MT_TRACKING_ID,
-        libevdev.InputAbsInfo(
-            minimum=0,
-            maximum=65535
-        )
+        libevdev.InputAbsInfo(minimum=0, maximum=65535)
     )
+
+    # ----- Pen -----
 
     # Enable pen input, tilt and pressure
     device.enable(
         libevdev.EV_ABS.ABS_X,
-        libevdev.InputAbsInfo(
-            minimum=0,
-            maximum=MAX_ABS_X,
-            resolution=2531
-        )
+        libevdev.InputAbsInfo(minimum=0, maximum=MAX_ABS_X, resolution=2531)
     )
     device.enable(
         libevdev.EV_ABS.ABS_Y,
-        libevdev.InputAbsInfo(
-            minimum=0,
-            maximum=MAX_ABS_Y,
-            resolution=2531
-        )
+        libevdev.InputAbsInfo(minimum=0, maximum=MAX_ABS_Y, resolution=2531)
     )
     device.enable(
         libevdev.EV_ABS.ABS_PRESSURE,
-        libevdev.InputAbsInfo(
-            minimum=0,
-            maximum=4095
-        )
+        libevdev.InputAbsInfo(minimum=0, maximum=4095)
     )
     device.enable(
         libevdev.EV_ABS.ABS_DISTANCE,
-        libevdev.InputAbsInfo(
-            minimum=0,
-            maximum=255
-        )
+        libevdev.InputAbsInfo(minimum=0, maximum=255)
     )
     device.enable(
         libevdev.EV_ABS.ABS_TILT_X,
-        libevdev.InputAbsInfo(
-            minimum=-9000,
-            maximum=9000
-        )
+        libevdev.InputAbsInfo(minimum=-9000, maximum=9000)
     )
     device.enable(
         libevdev.EV_ABS.ABS_TILT_Y,
-        libevdev.InputAbsInfo(
-            minimum=-9000,
-            maximum=9000
-        )
+        libevdev.InputAbsInfo(minimum=-9000, maximum=9000)
     )
 
     return device.create_uinput_device()
 
 
-# remap screen coordinates to wacom coordinates
-def remap(x, y, wacom_width, wacom_height, monitor_width,
+# map computer screen coordinates to rM pen coordinates
+def map_comp2pen(x, y, wacom_width, wacom_height, monitor_width,
           monitor_height, mode, orientation=None):
 
     if orientation in ('bottom', 'top'):
@@ -189,8 +147,8 @@ def remap(x, y, wacom_width, wacom_height, monitor_width,
         scaling * (y - (monitor_height - wacom_height / scaling) / 2)
     )
 
-# remap screen coordinates to touch coordinates
-def remapTouch(x, y, touch_width, touch_height, monitor_width,
+# map computer screen coordinates to rM touch coordinates
+def map_comp2touch(x, y, touch_width, touch_height, monitor_width,
           monitor_height, mode, orientation=None):
 
     if orientation in ('left', 'right'):
@@ -211,18 +169,18 @@ def remapTouch(x, y, touch_width, touch_height, monitor_width,
         scaling * (y - (monitor_height - touch_height / scaling) / 2)
     )
 
-def pipe_device(args, remote_device, local_device):
+def configure_xinput(args):
     """
-    Pipe events from a remote device to a local device.
+    Configure screen mapping settings from rM to local machine
 
     Args:
         args: argparse arguments
-        remote_device (paramiko.ChannelFile): read-only stream of input events
-        local_device: local virtual input device to write events to
     """
 
     # give time for virtual device creation before running xinput commands
     time.sleep(1)
+
+    # ----- Pen -----
 
     # set orientation with xinput
     orientation = {'left': 0, 'bottom': 1, 'top': 2, 'right': 3}[args.orientation]
@@ -232,7 +190,7 @@ def pipe_device(args, remote_device, local_device):
         shell=True
     )
     if result.returncode != 0:
-        log.warning("Error setting orientation: %s", result.stderr)
+        log.warning("Error setting orientation: %s", result.stderr.decode('utf8'))
 
     # set monitor to use
     monitor = get_monitors()[args.monitor]
@@ -243,7 +201,7 @@ def pipe_device(args, remote_device, local_device):
         shell=True
     )
     if result.returncode != 0:
-        log.warning("Error setting monitor: %s", result.stderr)
+        log.warning("Error setting monitor: %s", result.stderr.decode('utf8'))
 
     # set stylus pressure
     result = subprocess.run(
@@ -252,16 +210,16 @@ def pipe_device(args, remote_device, local_device):
         shell=True
     )
     if result.returncode != 0:
-        log.warning("Error setting pressure threshold: %s", result.stderr)
+        log.warning("Error setting pressure threshold: %s", result.stderr.decode('utf8'))
 
     # set fitting mode
-    min_x, min_y = remap(
+    min_x, min_y = map_comp2pen(
         0, 0,
         MAX_ABS_X, MAX_ABS_Y, monitor.width, monitor.height,
         args.mode,
         args.orientation
     )
-    max_x, max_y = remap(
+    max_x, max_y = map_comp2pen(
         monitor.width, monitor.height,
         MAX_ABS_X, MAX_ABS_Y, monitor.width, monitor.height,
         args.mode,
@@ -275,16 +233,18 @@ def pipe_device(args, remote_device, local_device):
         shell=True
     )
     if result.returncode != 0:
-        log.warning("Error setting fit: %s", result.stderr)
-    
+        log.warning("Error setting fit: %s", result.stderr.decode('utf8'))
+
+    # ----- Touch -----
+
     # Set touch fitting mode
-    mt_min_x, mt_min_y = remapTouch(
+    mt_min_x, mt_min_y = map_comp2touch(
         0, 0,
         MT_MAX_ABS_X, MT_MAX_ABS_Y, monitor.width, monitor.height,
         args.mode,
         args.orientation
     )
-    mt_max_x, mt_max_y = remapTouch(
+    mt_max_x, mt_max_y = map_comp2touch(
         monitor.width, monitor.height,
         MT_MAX_ABS_X, MT_MAX_ABS_Y, monitor.width, monitor.height,
         args.mode,
@@ -298,60 +258,104 @@ def pipe_device(args, remote_device, local_device):
         shell=True
     )
     if result.returncode != 0:
-        log.warning("Error setting fit: %s", result.stderr)
+        log.warning("Error setting fit: %s", result.stderr.decode('utf8'))
     result = subprocess.run( # Just need to rotate the touchscreen -90 so that it matches the wacom sensor.
         'xinput --set-prop "reMarkable pen touch" "Coordinate Transformation Matrix" 0 1 0 -1 0 1 0 0 1',
         capture_output=True,
         shell=True
     )
     if result.returncode != 0:
-        log.warning("Error setting orientation: %s", result.stderr)
+        log.warning("Error setting orientation: %s", result.stderr.decode('utf8'))
 
+
+def read_tablet(args, rm_inputs, local_device):
+    """
+    Pipe rM evdev events to local device
+    Args:
+        rm_inputs (tuple of paramiko.ChannelFile): tuple of pen, button
+            and touch input streams
+        local_device: local virtual input device to write events to
+    """
 
     import libevdev
 
     # While debug mode is active, we log events grouped together between
     # SYN_REPORT events. Pending events for the next log are stored here
     pending_events = []
-    pen_down = 0
 
-    while True:
-        for device in remote_device:
-            ev = 0
-            try:
-                ev = device.read(16)
-            except timeout:
-                continue
+    # loop inputs forever
+    for rm_input in cycle(rm_inputs[1:2]):
+        try:
+            data = rm_input.read(16)
+        except TimeoutError:
+            continue
 
-            e_time, e_millis, e_type, e_code, e_value = struct.unpack('2IHHi', ev)
-            e_bit = libevdev.evbit(e_type, e_code)
+        e_time, e_millis, e_type, e_code, e_value = struct.unpack('2IHHi', data)
 
-            if e_bit == libevdev.EV_KEY.KEY_LEFT:
-                e_bit = libevdev.EV_KEY.BTN_0
-            if e_bit == libevdev.EV_KEY.KEY_HOME:
-                e_bit = libevdev.EV_KEY.BTN_1
-            if e_bit == libevdev.EV_KEY.KEY_RIGHT:
-                e_bit = libevdev.EV_KEY.BTN_2
+        e_bit = libevdev.evbit(e_type, e_code)
+        event = libevdev.InputEvent(e_bit, value=e_value)
 
-            event = libevdev.InputEvent(e_bit, value=e_value)
-            
-            if e_bit == libevdev.EV_KEY.BTN_TOOL_PEN:
-                pen_down = e_value
+        local_device.send_events([event])
 
-            if pen_down and 'ABS_MT' in event.code.name: # Palm rejection
-                pass
+        if args.debug:
+            if e_bit == libevdev.EV_SYN.SYN_REPORT:
+                event_repr = ', '.join(
+                    '{} = {}'.format(
+                        event.code.name,
+                        event.value
+                    ) for event in pending_events
+                )
+                log.debug('{}.{:0>6} - {}'.format(e_time, e_millis, event_repr))
+                pending_events = []
             else:
-                local_device.send_events([event])
+                pending_events.append(event)
 
-            if args.debug:
-                if e_bit == libevdev.EV_SYN.SYN_REPORT:
-                    event_repr = ', '.join(
-                        '{} = {}'.format(
-                            event.code.name,
-                            event.value
-                        ) for event in pending_events
-                    )
-                    log.debug('{}.{:0>6} - {}'.format(e_time, e_millis, event_repr))
-                    pending_events = []
-                else:
-                    pending_events += [event]
+
+
+
+
+
+
+
+
+
+
+    # pen_down = 0
+
+    # while True:
+    #     for device in rm_inputs:
+    #         try:
+    #             e_time, e_millis, e_type, e_code, e_value = struct.unpack('2IHHi', ev.read(16))
+    #             e_bit = libevdev.evbit(e_type, e_code)
+    #         except timeout:
+    #             continue
+
+    #         if e_bit == libevdev.EV_KEY.KEY_LEFT:
+    #             e_bit = libevdev.EV_KEY.BTN_0
+    #         if e_bit == libevdev.EV_KEY.KEY_HOME:
+    #             e_bit = libevdev.EV_KEY.BTN_1
+    #         if e_bit == libevdev.EV_KEY.KEY_RIGHT:
+    #             e_bit = libevdev.EV_KEY.BTN_2
+
+    #         event = libevdev.InputEvent(e_bit, value=e_value)
+
+    #         if e_bit == libevdev.EV_KEY.BTN_TOOL_PEN:
+    #             pen_down = e_value
+
+    #         if pen_down and 'ABS_MT' in event.code.name: # Palm rejection
+    #             pass
+    #         else:
+    #             local_device.send_events([event])
+
+    #         if args.debug:
+    #             if e_bit == libevdev.EV_SYN.SYN_REPORT:
+    #                 event_repr = ', '.join(
+    #                     '{} = {}'.format(
+    #                         event.code.name,
+    #                         event.value
+    #                     ) for event in pending_events
+    #                 )
+    #                 log.debug('{}.{:0>6} - {}'.format(e_time, e_millis, event_repr))
+    #                 pending_events = []
+    #             else:
+    #                 pending_events += [event]

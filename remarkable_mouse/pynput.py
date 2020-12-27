@@ -3,7 +3,7 @@ import struct
 from screeninfo import get_monitors
 
 logging.basicConfig(format='%(message)s')
-log = logging.getLogger(__name__)
+log = logging.getLogger('remouse')
 
 # evtype_sync = 0
 # evtype_key = 1

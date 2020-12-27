@@ -12,10 +12,10 @@ import paramiko
 import paramiko.agent
 
 logging.basicConfig(format='%(message)s')
-log = logging.getLogger(__name__)
+log = logging.getLogger('remouse')
 
 
-def open_remote_device(args, file='/dev/input/event0'):
+def open_rm_inputs(args):
     """
     Open a remote input device via SSH.
 
@@ -23,9 +23,11 @@ def open_remote_device(args, file='/dev/input/event0'):
         args: argparse arguments
         file (str): path to the input device on the device
     Returns:
-        (paramiko.ChannelFile): read-only stream of input events
+        (paramiko.ChannelFile): read-only stream of pen events
+        (paramiko.ChannelFile): read-only stream of touch events
+        (paramiko.ChannelFile): read-only stream of button events
     """
-    log.info("Connecting to input '{}' on '{}'".format(file, args.address))
+    log.debug("Connecting to input '{}'".format(args.address))
 
     client = paramiko.SSHClient()
     client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
@@ -68,17 +70,35 @@ def open_remote_device(args, file='/dev/input/event0'):
 
     paramiko.agent.AgentRequestHandler(session)
 
+    pen_file =client.exec_command(
+        'readlink -f /dev/input/touchscreen0'
+    )[1].read().decode('utf8').rstrip('\n')
+
+    # handle both reMarkable versions
+    # https://github.com/Eeems/oxide/issues/48#issuecomment-690830572
+    if pen_file == '/dev/input/event0':
+        # rM 1
+        touch_file = '/dev/input/event1'
+        button_file = '/dev/input/event2'
+    else:
+        # rM 2
+        touch_file = '/dev/input/event2'
+        button_file = '/dev/input/event0'
+
+    log.debug('Pen:{}\nTouch:{}\nButton:{}'.format(pen_file, touch_file, button_file))
+
     # Start reading events
-    _, pen, _ = client.exec_command('cat ' + file)
-    _, mt,  _ = client.exec_command('cat /dev/input/event1')
-    _, btn, _ = client.exec_command('cat /dev/input/event2')
-    pen.channel.setblocking(0)
-    mt.channel.setblocking(0)
-    btn.channel.setblocking(0)
+    pen = client.exec_command('cat ' + pen_file)[1]
+    touch = client.exec_command('cat ' + touch_file)[1]
+    button = client.exec_command('cat ' + button_file)[1]
+    # Skip to next input if no data available
+    # pen.channel.setblocking(0)
+    # touch.channel.setblocking(0)
+    # button.channel.setblocking(0)
 
-    print("connected to", args.address)
+    print("Connected to", args.address)
 
-    return pen, mt, btn
+    return pen, touch, button
 
 
 def main():
@@ -96,17 +116,16 @@ def main():
 
         args = parser.parse_args()
 
-        remote_device = open_remote_device(args)
-
         if args.debug:
-            logging.getLogger('').setLevel(logging.DEBUG)
             log.setLevel(logging.DEBUG)
-            log.info('Debugging enabled...')
+            print('Debugging enabled...')
         else:
             log.setLevel(logging.INFO)
 
+        rm_inputs = open_rm_inputs(args)
+
         if args.evdev:
-            from remarkable_mouse.evdev import create_local_device, pipe_device
+            from remarkable_mouse.evdev import create_local_device, configure_xinput, read_tablet
 
             try:
                 local_device = create_local_device()
@@ -116,11 +135,12 @@ def main():
                 log.error('Make sure you run this program as root')
                 sys.exit(1)
 
-            pipe_device(args, remote_device, local_device)
+            configure_xinput(args)
+            read_tablet(args, rm_inputs, local_device)
 
         else:
             from remarkable_mouse.pynput import read_tablet
-            read_tablet(args, remote_device)
+            read_tablet(args, rm_inputs)
 
     except KeyboardInterrupt:
         pass
