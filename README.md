@@ -54,3 +54,24 @@ remouse --key ~/.ssh/remarkable
       --threshold THRESH    stylus pressure threshold (default 600)
       --evdev               use evdev to support pen pressure (requires root,
                             Linux only)
+
+# Installation for reMarkable2
+```
+### install python3 virtualenv
+sudo apt-get install python3-venv
+### create your virtualenv
+python3 -m venv <myenvname>
+### go into your new virtualenv
+cd <myenvname>
+### activate your virtualenv
+source bin/activate
+### install wheel (dependency)
+pip install wheel
+### install python3-dec (dependency)
+sudo apt-get install -y python3-dev
+### install the reMarkable2 brach of remarkable_mouse
+pip install git+git://github.com/Evidlo/remarkable_mouse.git@rm2
+### start remarkable_mouse
+remouse --address 192.168.1.1 --orientation right --mode fit --monitor 0 --password foobar
+```
+
