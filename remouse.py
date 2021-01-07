@@ -6,10 +6,13 @@ import struct
 
 # ----- Settings -----
 
+password = ''
+assert password, "Set your password in remouse.py"
+
 # rm1
 inputfile = '/dev/input/event0'
 # rm2
-# inputfile = '/dev/input/event0'
+# inputfile = '/dev/input/event1'
 
 monitor_num = 0
 
@@ -19,8 +22,6 @@ orientation = 'right'
 mode = 'fill'
 
 # ----- Establish SSH -----
-
-password = 'jXHNFrWkLM'
 
 client = paramiko.SSHClient()
 client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
