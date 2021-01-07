@@ -3,11 +3,12 @@ import paramiko.agent
 from screeninfo import get_monitors
 from pynput.mouse import Button, Controller
 import struct
+import sys
 
 # ----- Settings -----
 
-password = ''
-assert password, "Set your password in remouse.py"
+password = sys.argv[1]
+assert password, "Set your password as the first argument"
 
 # rm1
 inputfile = '/dev/input/event0'
