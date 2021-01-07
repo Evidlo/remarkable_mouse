@@ -3,11 +3,12 @@ import paramiko.agent
 from screeninfo import get_monitors
 from pynput.mouse import Button, Controller
 import struct
+import sys
 
 # ----- Settings -----
 
-password = ''
-assert password, "Set your password in remouse.py"
+password = sys.argv[1]
+assert password, "provide password as first argument"
 
 # rm1
 inputfile = '/dev/input/event0'
@@ -76,58 +77,56 @@ def remap(x, y, wacom_width, wacom_height, monitor_width,
 
 # ----- pynput loop -----
 
+e_type_sync = 0
+e_type_key = 1
 e_type_abs = 3
 e_code_stylus_xpos = 1
 e_code_stylus_ypos = 0
 e_code_stylus_pressure = 24
+e_code_touch = 330
 wacom_width = 15725
 wacom_height = 20967
 
-lifted = True
-new_x = new_y = False
-
+x = y = 0
 mouse = Controller()
-
 monitor = get_monitors()[monitor_num]
+event_log = []
 
 while True:
     # read one evdev event at a time
     _, _, e_type, e_code, e_value = struct.unpack('2IHHi', stdout.read(16))
 
-    if e_type == e_type_abs:
+    # if sync event, process all previously logged events
+    if e_type == e_type_sync:
+        for log_type, log_code, log_value in event_log:
 
-        # handle x direction
-        if e_code == e_code_stylus_xpos:
-            x = e_value
-            new_x = True
+            print(log_type)
+            # handle stylus coordinates
+            if log_type == e_type_abs:
+                print('got abs event')
+                if log_code == e_code_stylus_xpos:
+                    x = log_value
+                if log_code == e_code_stylus_ypos:
+                    y = log_value
+            # handle stylus press/release
+            if log_type == e_type_key:
+                if log_code == e_code_touch:
+                    if log_value == 1:
+                        mouse.press(Button.left)
+                    else:
+                        mouse.release(Button.left)
 
-        # handle y direction
-        if e_code == e_code_stylus_ypos:
-            y = e_value
-            new_y = True
-
-        # handle draw
-        if e_code == e_code_stylus_pressure:
-            if e_value > threshold:
-                if lifted:
-                    lifted = False
-                    mouse.press(Button.left)
-            else:
-                if not lifted:
-                    lifted = True
-                    mouse.release(Button.left)
-
-
-        # only move when x and y are updated for smoother mouse
-        if new_x and new_y:
-            mapped_x, mapped_y = remap(
-                x, y,
-                wacom_width, wacom_height,
-                monitor.width, monitor.height,
-                mode, orientation
-            )
-            mouse.move(
-                monitor.x + mapped_x - mouse.position[0],
-                monitor.y + mapped_y - mouse.position[1]
-            )
-            new_x = new_y = False
+        mapped_x, mapped_y = remap(
+            x, y,
+            wacom_width, wacom_height,
+            monitor.width, monitor.height,
+            mode, orientation
+        )
+        mouse.move(
+            monitor.x + mapped_x - mouse.position[0],
+            monitor.y + mapped_y - mouse.position[1]
+        )
+        event_log = []
+    # otherwise, log the event
+    else:
+        event_log.append((e_type, e_code, e_value))
