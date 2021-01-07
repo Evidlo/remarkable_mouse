@@ -100,10 +100,8 @@ while True:
     if e_type == e_type_sync:
         for log_type, log_code, log_value in event_log:
 
-            print(log_type)
             # handle stylus coordinates
             if log_type == e_type_abs:
-                print('got abs event')
                 if log_code == e_code_stylus_xpos:
                     x = log_value
                 if log_code == e_code_stylus_ypos:
