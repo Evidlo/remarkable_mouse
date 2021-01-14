@@ -5,6 +5,11 @@ from pynput.mouse import Button, Controller
 import struct
 import sys
 
+# run script w/ line_profiler
+#     kernprof -l remouse.py password
+# view line profiler results
+#     python -m line_profiler remouse.py.lprof
+
 # ----- Settings -----
 
 password = sys.argv[1]
@@ -92,39 +97,44 @@ mouse = Controller()
 monitor = get_monitors()[monitor_num]
 event_log = []
 
-while True:
-    # read one evdev event at a time
-    _, _, e_type, e_code, e_value = struct.unpack('2IHHi', stdout.read(16))
+@profile
+def loop():
+    global event_log
+    while True:
+        # read one evdev event at a time
+        _, _, e_type, e_code, e_value = struct.unpack('2IHHi', stdout.read(16))
 
-    # if sync event, process all previously logged events
-    if e_type == e_type_sync:
-        for log_type, log_code, log_value in event_log:
+        # if sync event, process all previously logged events
+        if e_type == e_type_sync:
+            for log_type, log_code, log_value in event_log:
 
-            # handle stylus coordinates
-            if log_type == e_type_abs:
-                if log_code == e_code_stylus_xpos:
-                    x = log_value
-                if log_code == e_code_stylus_ypos:
-                    y = log_value
-            # handle stylus press/release
-            if log_type == e_type_key:
-                if log_code == e_code_touch:
-                    if log_value == 1:
-                        mouse.press(Button.left)
-                    else:
-                        mouse.release(Button.left)
+                # handle stylus coordinates
+                if log_type == e_type_abs:
+                    if log_code == e_code_stylus_xpos:
+                        x = log_value
+                    if log_code == e_code_stylus_ypos:
+                        y = log_value
+                # handle stylus press/release
+                if log_type == e_type_key:
+                    if log_code == e_code_touch:
+                        if log_value == 1:
+                            mouse.press(Button.left)
+                        else:
+                            mouse.release(Button.left)
 
-        mapped_x, mapped_y = remap(
-            x, y,
-            wacom_width, wacom_height,
-            monitor.width, monitor.height,
-            mode, orientation
-        )
-        mouse.move(
-            monitor.x + mapped_x - mouse.position[0],
-            monitor.y + mapped_y - mouse.position[1]
-        )
-        event_log = []
-    # otherwise, log the event
-    else:
-        event_log.append((e_type, e_code, e_value))
+            mapped_x, mapped_y = remap(
+                x, y,
+                wacom_width, wacom_height,
+                monitor.width, monitor.height,
+                mode, orientation
+            )
+            mouse.move(
+                monitor.x + mapped_x - mouse.position[0],
+                monitor.y + mapped_y - mouse.position[1]
+            )
+            event_log = []
+        # otherwise, log the event
+        else:
+            event_log.append((e_type, e_code, e_value))
+
+loop()
