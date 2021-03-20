@@ -1,4 +1,5 @@
 import logging
+import socket
 import struct
 from screeninfo import get_monitors
 
@@ -71,7 +72,10 @@ def read_tablet(args, remote_device):
     log.debug('Chose monitor: {}'.format(monitor))
 
     while True:
-        _, _, e_type, e_code, e_value = struct.unpack('2IHHi', remote_device[0].read(16))
+        try:
+            _, _, e_type, e_code, e_value = struct.unpack('2IHHi', remote_device[0].read(16))
+        except socket.timeout:
+            continue
 
         if e_type == e_type_abs:
 
