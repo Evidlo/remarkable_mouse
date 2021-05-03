@@ -1,0 +1,29 @@
+# reMarkable 
+#
+# Button Map: TODO
+#
+# Default button assignments: TODO
+#
+# stylus with two buttons and no eraser
+# Pen active area: 8.25 x 6.125 in
+
+[Device]
+Name=reMarkable tablet 1
+DeviceMatch=usb:056a:0004
+Class=Bamboo
+Width=6
+Height=8
+IntegratedIn=
+#Layout=
+Styli= #FIXME
+
+[Features]
+Stylus=true
+Reversible=true
+Touch=false # will update when we fix this
+Buttons=3
+Ring=false
+
+[Buttons]
+Top=A;B;C
+EvdevCodes=0x110;0x112;0x111 # might need tweaking
