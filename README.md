@@ -35,7 +35,7 @@ remouse --key ~/.ssh/remarkable
 # Usage
 
     usage: remouse [-h] [--debug] [--key PATH] [--password PASSWORD]
-                  [--address ADDRESS] [--mode {fit,fill}]
+                  [--address ADDRESS] [--mode {fit,fill,stretch}]
                   [--orientation {top,left,right,bottom}] [--monitor NUM]
                   [--threshold THRESH] [--evdev]
 
@@ -47,7 +47,10 @@ remouse --key ~/.ssh/remarkable
       --key PATH            ssh private key
       --password PASSWORD   ssh password
       --address ADDRESS     device address
-      --mode {fit,fill}     scale setting
+      --mode {fit,fill}     Scale setting.
+                            Fit (default): take up the entire tablet, but not necessarily the entire monitor. 
+                            Fill: take up the entire monitor, but not necessarily the entire tablet. 
+                            Stretch: take up both the entire tablet and monitor, but don't maintain aspect ratio.
       --orientation {top,left,right,bottom}
                             position of tablet buttons
       --monitor NUM         monitor to output to
