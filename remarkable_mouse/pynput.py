@@ -45,15 +45,20 @@ def remap(x, y, wacom_width, wacom_height, monitor_width,
     ratio_width, ratio_height = monitor_width / wacom_width, monitor_height / wacom_height
 
     if mode == 'fill':
-        scaling = max(ratio_width, ratio_height)
+        scaling_x = max(ratio_width, ratio_height)
+        scaling_y = scaling_x
     elif mode == 'fit':
-        scaling = min(ratio_width, ratio_height)
+        scaling_x = min(ratio_width, ratio_height)
+        scaling_y = scaling_x
+    elif mode == 'stretch':
+        scaling_x = ratio_width
+        scaling_y = ratio_height
     else:
         raise NotImplementedError
 
     return (
-        scaling * (x - (wacom_width - monitor_width / scaling) / 2),
-        scaling * (y - (wacom_height - monitor_height / scaling) / 2)
+        scaling_x * (x - (wacom_width - monitor_width / scaling_x) / 2),
+        scaling_y * (y - (wacom_height - monitor_height / scaling_y) / 2)
     )
 
 
