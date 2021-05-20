@@ -17,6 +17,8 @@ remouse
 
 By default, `10.11.99.1` is used as the address. Seems to work pretty well wirelessly, too. By default ssh-agent is used to authenticate if it is available, otherwise you are asked for your password.
 
+To use the `--rect` flag, you may need to install the `python3-tk` or `python3-tkinter` package with your package manager.
+
 # Examples
 
 specify address, monitor, orientation, password
@@ -54,6 +56,8 @@ remouse --key ~/.ssh/remarkable
       --orientation {top,left,right,bottom}
                             position of tablet buttons
       --monitor NUM         monitor to output to
+      --rect                Use a GUI to position the output area. Overrides --monitor. 
+                            It is recommended to use --mode stretch with this option
       --threshold THRESH    stylus pressure threshold (default 600)
       --evdev               use evdev to support pen pressure (requires root,
                             Linux only)
