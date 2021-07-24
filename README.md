@@ -15,7 +15,7 @@ pip install remarkable-mouse
 remouse
 ```
 
-By default, `10.11.99.1` is used as the address. Seems to work pretty well wirelessly, too. By default ssh-agent is used to authenticate if it is available, otherwise you are asked for your password.
+By default, `10.11.99.1` is used as the address. Seems to work pretty well wirelessly, too. By default ssh-agent is used to authenticate if it is available, otherwise you are asked for your password.  Find your password in the reMarkable's [settings menu](https://remarkablewiki.com/tech/ssh).
 
 # Examples
 

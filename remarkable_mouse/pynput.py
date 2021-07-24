@@ -3,7 +3,7 @@ import struct
 from screeninfo import get_monitors
 
 logging.basicConfig(format='%(message)s')
-log = logging.getLogger(__name__)
+log = logging.getLogger('remouse')
 
 # evtype_sync = 0
 # evtype_key = 1
@@ -57,8 +57,17 @@ def remap(x, y, wacom_width, wacom_height, monitor_width,
     )
 
 
-def read_tablet(args, remote_device):
-    """Loop forever and map evdev events to mouse"""
+def read_tablet(rm_inputs, *, orientation, monitor, threshold, mode):
+    """Loop forever and map evdev events to mouse
+
+    Args:
+        rm_inputs (dictionary of paramiko.ChannelFile): dict of pen, button
+            and touch input streams
+        orientation (str): tablet orientation
+        monitor (int): monitor number to map to
+        threshold (int): pressure threshold
+        mode (str): mapping mode
+    """
 
     from pynput.mouse import Button, Controller
 
@@ -67,11 +76,11 @@ def read_tablet(args, remote_device):
 
     mouse = Controller()
 
-    monitor = get_monitors()[args.monitor]
+    monitor = get_monitors()[monitor]
     log.debug('Chose monitor: {}'.format(monitor))
 
     while True:
-        _, _, e_type, e_code, e_value = struct.unpack('2IHHi', remote_device.read(16))
+        _, _, e_type, e_code, e_value = struct.unpack('2IHHi', rm_inputs['pen'].read(16))
 
         if e_type == e_type_abs:
 
@@ -90,7 +99,7 @@ def read_tablet(args, remote_device):
             # handle draw
             if e_code == e_code_stylus_pressure:
                 log.debug('\t\t{}'.format(e_value))
-                if e_value > args.threshold:
+                if e_value > threshold:
                     if lifted:
                         log.debug('PRESS')
                         lifted = False
@@ -108,7 +117,7 @@ def read_tablet(args, remote_device):
                     x, y,
                     wacom_width, wacom_height,
                     monitor.width, monitor.height,
-                    args.mode, args.orientation
+                    mode, orientation
                 )
                 mouse.move(
                     monitor.x + mapped_x - mouse.position[0],
