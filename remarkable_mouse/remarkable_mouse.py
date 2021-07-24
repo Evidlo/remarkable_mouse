@@ -101,10 +101,6 @@ def open_rm_inputs(*, address, key, password):
     pen = client.exec_command('cat ' + pen_file)[1]
     touch = client.exec_command('cat ' + touch_file)[1]
     button = client.exec_command('cat ' + button_file)[1]
-    # Skip to next input if no data available
-    # pen.channel.setblocking(0)
-    # touch.channel.setblocking(0)
-    # button.channel.setblocking(0)
 
     return {'pen': pen, 'touch': touch, 'button': button}
 
@@ -139,28 +135,9 @@ def main():
         )
         print("Connected to", args.address)
 
-        # ----- Setup event handlers -----
+        # ----- Handle events -----
 
         if args.evdev:
-            # from remarkable_mouse.evdev import create_local_device, configure_xinput, read_tablet
-
-            # try:
-            #     local_device = create_local_device()
-            #     log.info("Created virtual input device '{}'".format(local_device.devnode))
-            # except PermissionError:
-            #     log.error('Insufficient permissions for creating a virtual input device')
-            #     log.error('Make sure you run this program as root')
-            #     sys.exit(1)
-
-            # configure_xinput(
-            #     orientation=args.orientation,
-            #     monitor=args.monitor,
-            #     threshold=args.threshold,
-            #     mode=args.mode,
-            # )
-            # read_tablet(rm_inputs, local_device)
-            #
-            # from remarkable_mouse.evdev import create_handler
             from remarkable_mouse.evdev import read_tablet
 
         else:
@@ -173,29 +150,6 @@ def main():
             threshold=args.threshold,
             mode=args.mode,
         )
-            # from remarkable_mouse.pynput import create_handler
-
-        # event_handler = create_handler(
-        #     orientation=args.orientation,
-        #     monitor=args.monitor,
-        #     threshold=args.threshold,
-        #     mode=args.mode,
-        # )
-
-        # ----- Handle events -----
-
-        # loop inputs forever
-        # import socket
-        # for name, stream in cycle(rm_inputs.items()):
-        #     try:
-        #         data = stream.read(16)
-        #     except socket.timeout:
-        #         continue
-
-        #     e_time, e_millis, e_type, e_code, e_value = struct.unpack('2IHHi', data)
-
-        #     event_handler(e_time, e_millis, e_type, e_code, e_value)
-
 
     except PermissionError:
         log.error('Insufficient permissions for creating a virtual input device')
