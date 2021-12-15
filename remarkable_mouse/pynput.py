@@ -2,6 +2,8 @@ import logging
 import struct
 from screeninfo import get_monitors
 
+from .common import get_monitor
+
 logging.basicConfig(format='%(message)s')
 log = logging.getLogger('remouse')
 
@@ -45,26 +47,32 @@ def remap(x, y, wacom_width, wacom_height, monitor_width,
     ratio_width, ratio_height = monitor_width / wacom_width, monitor_height / wacom_height
 
     if mode == 'fill':
-        scaling = max(ratio_width, ratio_height)
+        scaling_x = max(ratio_width, ratio_height)
+        scaling_y = scaling_x
     elif mode == 'fit':
-        scaling = min(ratio_width, ratio_height)
+        scaling_x = min(ratio_width, ratio_height)
+        scaling_y = scaling_x
+    elif mode == 'stretch':
+        scaling_x = ratio_width
+        scaling_y = ratio_height
     else:
         raise NotImplementedError
 
     return (
-        scaling * (x - (wacom_width - monitor_width / scaling) / 2),
-        scaling * (y - (wacom_height - monitor_height / scaling) / 2)
+        scaling_x * (x - (wacom_width - monitor_width / scaling_x) / 2),
+        scaling_y * (y - (wacom_height - monitor_height / scaling_y) / 2)
     )
 
 
-def read_tablet(rm_inputs, *, orientation, monitor, threshold, mode):
+def read_tablet(rm_inputs, *, orientation, monitor_num, region, threshold, mode):
     """Loop forever and map evdev events to mouse
 
     Args:
         rm_inputs (dictionary of paramiko.ChannelFile): dict of pen, button
             and touch input streams
         orientation (str): tablet orientation
-        monitor (int): monitor number to map to
+        monitor_num (int): monitor number to map to
+        region (boolean): whether to selection mapping region with region tool
         threshold (int): pressure threshold
         mode (str): mapping mode
     """
@@ -76,7 +84,7 @@ def read_tablet(rm_inputs, *, orientation, monitor, threshold, mode):
 
     mouse = Controller()
 
-    monitor = get_monitors()[monitor]
+    monitor = get_monitor(monitor_num, region, orientation)
     log.debug('Chose monitor: {}'.format(monitor))
 
     while True:

@@ -112,9 +112,13 @@ def main():
         parser.add_argument('--key', type=str, metavar='PATH', help="ssh private key")
         parser.add_argument('--password', default=None, type=str, help="ssh password")
         parser.add_argument('--address', default='10.11.99.1', type=str, help="device address")
-        parser.add_argument('--mode', default='fill', choices=['fit', 'fill'], help="scale setting")
-        parser.add_argument('--orientation', default='right', choices=['top', 'left', 'right', 'bottom'], help="position of charging port")
+        parser.add_argument('--mode', default='fill', choices=['fit', 'fill', 'stretch'], help="""Scale setting.
+        Fit (default): take up the entire tablet, but not necessarily the entire monitor.
+        Fill: take up the entire monitor, but not necessarily the entire tablet.
+        Stretch: take up both the entire tablet and monitor, but don't maintain aspect ratio.""")
+        parser.add_argument('--orientation', default='right', choices=['top', 'left', 'right', 'bottom'], help="position of tablet buttons")
         parser.add_argument('--monitor', default=0, type=int, metavar='NUM', help="monitor to output to")
+        parser.add_argument('--region', action='store_true', default=False, help="Use a GUI to position the output area. Overrides --monitor")
         parser.add_argument('--threshold', metavar='THRESH', default=600, type=int, help="stylus pressure threshold (default 600)")
         parser.add_argument('--evdev', action='store_true', default=False, help="use evdev to support pen pressure (requires root, Linux only)")
 
@@ -146,7 +150,8 @@ def main():
         read_tablet(
             rm_inputs,
             orientation=args.orientation,
-            monitor=args.monitor,
+            monitor_num=args.monitor,
+            region=args.region,
             threshold=args.threshold,
             mode=args.mode,
         )
