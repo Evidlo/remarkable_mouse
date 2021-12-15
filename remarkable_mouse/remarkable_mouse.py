@@ -89,7 +89,7 @@ def main():
         Stretch: take up both the entire tablet and monitor, but don't maintain aspect ratio.""")
         parser.add_argument('--orientation', default='right', choices=['top', 'left', 'right', 'bottom'], help="position of tablet buttons")
         parser.add_argument('--monitor', default=0, type=int, metavar='NUM', help="monitor to output to")
-        parser.add_argument('--rect', action='store_true', default=False, help="Use a GUI to position the output area. Overrides --monitor. It is recommended to use --mode stretch with this option")
+        parser.add_argument('--region', action='store_true', default=False, help="Use a GUI to position the output area. Overrides --monitor")
         parser.add_argument('--threshold', metavar='THRESH', default=600, type=int, help="stylus pressure threshold (default 600)")
         parser.add_argument('--evdev', action='store_true', default=False, help="use evdev to support pen pressure (requires root, Linux only)")
 
