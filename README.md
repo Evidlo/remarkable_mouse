@@ -17,7 +17,7 @@ remouse
 
 By default, `10.11.99.1` is used as the address. Seems to work pretty well wirelessly, too. By default ssh-agent is used to authenticate if it is available, otherwise you are asked for your password.
 
-To use the `--rect` flag, you may need to install the `python3-tk` or `python3-tkinter` package with your package manager.
+To use the `--region` flag, you may need to install the `python3-tk` or `python3-tkinter` package with your package manager.
 
 # Examples
 
@@ -36,28 +36,25 @@ remouse --key ~/.ssh/remarkable
 
 # Usage
 
-    usage: remouse [-h] [--debug] [--key PATH] [--password PASSWORD]
-                  [--address ADDRESS] [--mode {fit,fill,stretch}]
-                  [--orientation {top,left,right,bottom}] [--monitor NUM]
-                  [--threshold THRESH] [--evdev]
+```
+usage: remouse [-h] [--debug] [--key PATH] [--password PASSWORD] [--address ADDRESS] [--mode {fit,fill,stretch}] [--orientation {top,left,right,bottom}] [--monitor NUM] [--region] [--threshold THRESH]
+               [--evdev]
 
-    use reMarkable tablet as a mouse input
+use reMarkable tablet as a mouse input
 
-    optional arguments:
-      -h, --help            show this help message and exit
-      --debug               enable debug messages
-      --key PATH            ssh private key
-      --password PASSWORD   ssh password
-      --address ADDRESS     device address
-      --mode {fit,fill}     Scale setting.
-                            Fit (default): take up the entire tablet, but not necessarily the entire monitor. 
-                            Fill: take up the entire monitor, but not necessarily the entire tablet. 
-                            Stretch: take up both the entire tablet and monitor, but don't maintain aspect ratio.
-      --orientation {top,left,right,bottom}
-                            position of tablet buttons
-      --monitor NUM         monitor to output to
-      --rect                Use a GUI to position the output area. Overrides --monitor. 
-                            It is recommended to use --mode stretch with this option
-      --threshold THRESH    stylus pressure threshold (default 600)
-      --evdev               use evdev to support pen pressure (requires root,
-                            Linux only)
+optional arguments:
+  -h, --help            show this help message and exit
+  --debug               enable debug messages
+  --key PATH            ssh private key
+  --password PASSWORD   ssh password
+  --address ADDRESS     device address
+  --mode {fit,fill,stretch}
+                        Scale setting. Fit (default): take up the entire tablet, but not necessarily the entire monitor. Fill: take up the entire monitor, but not necessarily the entire tablet. Stretch:
+                        take up both the entire tablet and monitor, but don't maintain aspect ratio.
+  --orientation {top,left,right,bottom}
+                        position of tablet buttons
+  --monitor NUM         monitor to output to
+  --region              Use a GUI to position the output area. Overrides --monitor
+  --threshold THRESH    stylus pressure threshold (default 600)
+  --evdev               use evdev to support pen pressure (requires root, Linux only)
+```
