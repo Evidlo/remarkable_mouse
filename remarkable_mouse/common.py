@@ -1,20 +1,23 @@
 #!/usr/bin/env python
 
+import logging
 import sys
 from screeninfo import get_monitors, Monitor
 
+logging.basicConfig(format='%(message)s')
+log = logging.getLogger('remouse')
 
 # get info of where we want to map the tablet to
-def get_monitor(args):
-    if args.region:
-        monitor = get_region(args)
+def get_monitor(region, monitor_num, orientation):
+    if region is not None:
+        monitor = get_region(orientation)
     else:
-        monitor = get_monitors()[args.monitor]
+        monitor = get_monitors()[monitor_num]
 
     return monitor
 
 # Pop up a window, ask the user to move the window, and then get the position of the window's contents
-def get_region(args):
+def get_region(orientation):
     try:
         import tkinter as tk
         from tkinter import ttk
@@ -50,7 +53,7 @@ def get_region(args):
     window.attributes('-alpha', 0.5)
     window.title("Remarkable Mouse")
 
-    if args.orientation == 'bottom' or args.orientation == 'top':
+    if orientation == 'bottom' or orientation == 'top':
         window.geometry("702x936")
     else:
         window.geometry("936x702")

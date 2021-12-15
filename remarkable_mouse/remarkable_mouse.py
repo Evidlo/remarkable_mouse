@@ -7,25 +7,31 @@ import os
 import sys
 import struct
 from getpass import getpass
+from itertools import cycle
 
 import paramiko
 import paramiko.agent
 
 logging.basicConfig(format='%(message)s')
-log = logging.getLogger(__name__)
+log = logging.getLogger('remouse')
+
+default_key = os.path.expanduser('~/.ssh/remarkable')
 
 
-def open_remote_device(args, file='/dev/input/event0'):
+def open_rm_inputs(*, address, key, password):
     """
     Open a remote input device via SSH.
 
     Args:
-        args: argparse arguments
-        file (str): path to the input device on the device
+        address (str): address to reMarkable
+        key (str, optional): path to reMarkable ssh key
+        password (str, optional): reMarkable ssh password
     Returns:
-        (paramiko.ChannelFile): read-only stream of input events
+        (paramiko.ChannelFile): read-only stream of pen events
+        (paramiko.ChannelFile): read-only stream of touch events
+        (paramiko.ChannelFile): read-only stream of button events
     """
-    log.info("Connecting to input '{}' on '{}'".format(file, args.address))
+    log.debug("Connecting to input '{}'".format(address))
 
     client = paramiko.SSHClient()
     client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
@@ -35,29 +41,35 @@ def open_remote_device(args, file='/dev/input/event0'):
 
     agent = paramiko.agent.Agent()
 
-    if args.key is not None:
-        password = None
+    def use_key(key):
         try:
-            pkey = paramiko.RSAKey.from_private_key_file(os.path.expanduser(args.key))
+            pkey = paramiko.RSAKey.from_private_key_file(os.path.expanduser(key))
         except paramiko.ssh_exception.PasswordRequiredException:
             passphrase = getpass(
-                "Enter passphrase for key '{}': ".format(os.path.expanduser(args.key))
+                "Enter passphrase for key '{}': ".format(os.path.expanduser(key))
             )
             pkey = paramiko.RSAKey.from_private_key_file(
-                os.path.expanduser(args.key),
+                os.path.expanduser(key),
                 password=passphrase
             )
-    elif args.password:
-        password = args.password
+        return pkey
+
+    if key is not None:
+        password = None
+        pkey = use_key(key)
+    elif os.path.exists(default_key):
+        password = None
+        pkey = use_key(default_key)
+    elif password:
         pkey = None
     elif not agent.get_keys():
         password = getpass(
-            "Password for '{}': ".format(args.address)
+            "Password for '{}': ".format(address)
         )
         pkey = None
 
     client.connect(
-        args.address,
+        address,
         username='root',
         password=password,
         pkey=pkey,
@@ -68,12 +80,29 @@ def open_remote_device(args, file='/dev/input/event0'):
 
     paramiko.agent.AgentRequestHandler(session)
 
+    pen_file = client.exec_command(
+        'readlink -f /dev/input/touchscreen0'
+    )[1].read().decode('utf8').rstrip('\n')
+
+    # handle both reMarkable versions
+    # https://github.com/Eeems/oxide/issues/48#issuecomment-690830572
+    if pen_file == '/dev/input/event0':
+        # rM 1
+        touch_file = '/dev/input/event1'
+        button_file = '/dev/input/event2'
+    else:
+        # rM 2
+        touch_file = '/dev/input/event2'
+        button_file = '/dev/input/event0'
+
+    log.debug('Pen:{}\nTouch:{}\nButton:{}'.format(pen_file, touch_file, button_file))
+
     # Start reading events
-    _, stdout, _ = client.exec_command('cat ' + file)
+    pen = client.exec_command('cat ' + pen_file)[1]
+    touch = client.exec_command('cat ' + touch_file)[1]
+    button = client.exec_command('cat ' + button_file)[1]
 
-    print("connected to", args.address)
-
-    return stdout
+    return {'pen': pen, 'touch': touch, 'button': button}
 
 
 def main():
@@ -95,32 +124,42 @@ def main():
 
         args = parser.parse_args()
 
-        remote_device = open_remote_device(args)
-
         if args.debug:
-            logging.getLogger('').setLevel(logging.DEBUG)
             log.setLevel(logging.DEBUG)
-            log.info('Debugging enabled...')
+            print('Debugging enabled...')
         else:
             log.setLevel(logging.INFO)
 
+        # ----- Connect to device -----
+
+        rm_inputs = open_rm_inputs(
+            address=args.address,
+            key=args.key,
+            password=args.password,
+        )
+        print("Connected to", args.address)
+
+        # ----- Handle events -----
+
         if args.evdev:
-            from remarkable_mouse.evdev import create_local_device, pipe_device
-
-            try:
-                local_device = create_local_device()
-                log.info("Created virtual input device '{}'".format(local_device.devnode))
-            except PermissionError:
-                log.error('Insufficient permissions for creating a virtual input device')
-                log.error('Make sure you run this program as root')
-                sys.exit(1)
-
-            pipe_device(args, remote_device, local_device)
+            from remarkable_mouse.evdev import read_tablet
 
         else:
             from remarkable_mouse.pynput import read_tablet
-            read_tablet(args, remote_device)
 
+        read_tablet(
+            rm_inputs,
+            orientation=args.orientation,
+            monitor_num=args.monitor,
+            region=args.region,
+            threshold=args.threshold,
+            mode=args.mode,
+        )
+
+    except PermissionError:
+        log.error('Insufficient permissions for creating a virtual input device')
+        log.error('Make sure you run this program as root')
+        sys.exit(1)
     except KeyboardInterrupt:
         pass
     except EOFError:
