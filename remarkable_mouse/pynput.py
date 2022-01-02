@@ -130,6 +130,7 @@ def handle_touch(rm_inputs, orientation, monitor, mode, q):
     def handle_event(event, touch, touchscreen: Touchscreen, raw_event: TouchEvent):
         touchscreen.update_timestamp(event)
         fingers = touchscreen.fingers
+        last_fingers = touchscreen.last_fingers
         from_pen = get_or_none(q) # get the last one
         delta_t = 10 # set high delay in case no message has been recieved
 
@@ -162,12 +163,23 @@ def handle_touch(rm_inputs, orientation, monitor, mode, q):
         dy = py-lpy
 
         dt = touchscreen.get_delta_time(event)
+        
+        if delta_t < 1:
+            return
 
-        if fingers == 2 and delta_t > 1:
+        if fingers == 2:
             mouse.scroll(dx, dy)
 
-        if fingers == 1 and delta_t > 1:
+        if fingers == 1:
             mouse.move(speed*dx, speed*dy)
+
+        if fingers == 3 and last_fingers == 2:
+            mouse.press(Button.left)
+            mouse.move(speed*dx, speed*dy)
+
+        if last_fingers == 3:
+            mouse.move(speed*dx, speed*dy)
+            mouse.release(Button.left)
 
         log.debug(
             f'{["Release","Press","Move"][event]}\t'+

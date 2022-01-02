@@ -98,10 +98,12 @@ class Touch(object):
                 self.on_move(event, self, touchscreen, raw_event)
             if event == TS_PRESS and callable(self.on_press):
                 self.presstime = datetime.now().timestamp()
+                touchscreen.last_fingers = touchscreen.fingers
                 touchscreen.fingers+=1
                 self.on_press(event, self, touchscreen, raw_event)
             if event == TS_RELEASE and callable(self.on_release):
                 self.releasetime = datetime.now().timestamp()
+                touchscreen.last_fingers = touchscreen.fingers
                 touchscreen.fingers-=1
                 self.on_release(event, self, touchscreen, raw_event)
         self.events = []
@@ -130,6 +132,7 @@ class Touchscreen(object):
         self._event_queue = queue.Queue()
         self._touch_slot = 0
         self.fingers = 0
+        self.last_fingers = 0
         self.last_timestamp = {}
         self.current_timestamp = {}
 
