@@ -1,13 +1,9 @@
-import glob
-import io
-import os
-import errno
 import struct
 from collections import namedtuple
 import threading
-import time
 import select
 import queue
+from datetime import date, datetime
 
 TOUCH_X = 0
 TOUCH_Y = 1
@@ -25,8 +21,8 @@ ABS_MT_POSITION_X = 0x35 # 53 Center X of multi touch position
 ABS_MT_POSITION_Y = 0x36 # 54 Center Y of multi touch position
 ABS_MT_TRACKING_ID = 0x39 # 57 Unique ID of initiated contact
 
-TS_PRESS = 1
 TS_RELEASE = 0
+TS_PRESS = 1
 TS_MOVE = 2
 
 class Touch(object):
@@ -43,6 +39,9 @@ class Touch(object):
         self.on_move = None
         self.on_press = None
         self.on_release = None
+        self.presstime = 0
+        self.releasetime = 0
+        
         
     @property
     def position(self):
@@ -92,19 +91,20 @@ class Touch(object):
         self.last_y = self._y
         self._y = value
 
-    def handle_events(self, fingers):
+    def handle_events(self, touchscreen, raw_event):
         """Run outstanding press/release/move events"""
         for event in self.events:
             if event == TS_MOVE and callable(self.on_move):
-                self.on_move(event, self, fingers)
+                self.on_move(event, self, touchscreen, raw_event)
             if event == TS_PRESS and callable(self.on_press):
-                fingers+=1
-                self.on_press(event, self, fingers)
+                self.presstime = datetime.now().timestamp()
+                touchscreen.fingers+=1
+                self.on_press(event, self, touchscreen, raw_event)
             if event == TS_RELEASE and callable(self.on_release):
-                fingers-=1
-                self.on_release(event, self, fingers)
+                self.releasetime = datetime.now().timestamp()
+                touchscreen.fingers-=1
+                self.on_release(event, self, touchscreen, raw_event)
         self.events = []
-        return fingers
 
 
 class Touches(list):
@@ -113,35 +113,40 @@ class Touches(list):
         return [touch for touch in self if touch.valid]
 
 class Touchscreen(object):
-
-    TOUCHSCREEN_EVDEV_NAME = 'FT5406 memory based driver'
     EVENT_FORMAT = str('2IHHi')
     EVENT_SIZE = struct.calcsize(EVENT_FORMAT)
 
-    def __init__(self, device=None, f_channel=None, f_stream=None):
-        self._device = self.TOUCHSCREEN_EVDEV_NAME if device is None else device
+
+    def __init__(self,f_channel, f_stream):
         self._running = False
         self._thread = None
         self._f_poll = select.poll()
 
-        if f_channel and f_stream:
-            self._f_device = f_channel
-            self._f_stream = f_stream
-        else:
-            self._f_device = io.open(self._touch_device(), 'rb', self.EVENT_SIZE)
+        self._f_device = f_channel
+        self._f_stream = f_stream
 
         self._f_poll.register(self._f_device, select.POLLIN)
-        self.position = Touch(0, 0, 0)
-        self.touches = Touches([Touch(x, 0, 0) for x in range(11)])
+        self.touches = Touches([Touch(indx, 0, 0) for indx in range(11)]) # sometimes it sends an 11th finger
         self._event_queue = queue.Queue()
         self._touch_slot = 0
         self.fingers = 0
+        self.last_timestamp = {}
+        self.current_timestamp = {}
+
+    def update_timestamp(self, event):
+        ts = (datetime.now().timestamp())
+        self.last_timestamp[event] = self.current_timestamp.get(event,0)
+        self.current_timestamp[event] = ts
+
+
+    def get_delta_time(self, event):
+        return self.current_timestamp.get(event,0) - self.last_timestamp.get(event,0)
 
     def _run(self):
         self._running = True
         while self._running:
             self.poll()
-            #time.sleep(0.0001)
+
 
     def run(self):
         if self._thread is not None:
@@ -184,7 +189,9 @@ class Touchscreen(object):
     def _get_pending_events(self):
         for event in self._lazy_read():
             (tv_sec, tv_usec, type, code, value) = struct.unpack(self.EVENT_FORMAT, event)
-            self._event_queue.put(TouchEvent(tv_sec + (tv_usec / 1000000), type, code, value))
+            ts = tv_sec + (tv_usec / 1000000)
+            event = TouchEvent(ts, type, code, value)
+            self._event_queue.put(event)
 
     def _wait_for_events(self, timeout=2):
         return self._f_poll.poll(timeout)
@@ -195,12 +202,6 @@ class Touchscreen(object):
         while not self._event_queue.empty():
             event = self._event_queue.get()
             self._event_queue.task_done()
-
-            if event.type == EV_SYN: # Sync
-                for touch in self.touches:
-                    self.fingers = touch.handle_events(self.fingers)
-                return self.touches
-                
             if event.type == EV_ABS: # Absolute cursor position
                 if event.code == ABS_MT_SLOT:
                     self._touch_slot = event.value
@@ -213,12 +214,11 @@ class Touchscreen(object):
             
                 if event.code == ABS_MT_POSITION_Y:
                     self._current_touch.y = event.value
-            
-                if event.code == ABS_X:
-                    self.position.x = event.value
-            
-                if event.code == ABS_Y:
-                    self.position.y = event.value
+
+            if event.type == EV_SYN: # Sync
+                for touch in self.touches:
+                    touch.handle_events(self,event)
+                return self.touches
 
         return []
 

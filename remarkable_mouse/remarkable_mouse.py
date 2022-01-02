@@ -147,7 +147,7 @@ def main():
         read_tablet(
             rm_inputs,
             orientation=args.orientation,
-            monitor=args.monitor,
+            monitor_idx=args.monitor,
             threshold=args.threshold,
             mode=args.mode,
         )
