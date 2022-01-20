@@ -73,7 +73,8 @@ def open_rm_inputs(*, address, key, password):
         username='root',
         password=password,
         pkey=pkey,
-        look_for_keys=False
+        look_for_keys=False,
+        disabled_algorithms=dict(pubkeys=["rsa-sha2-512", "rsa-sha2-256"])
     )
 
     session = client.get_transport().open_session()
