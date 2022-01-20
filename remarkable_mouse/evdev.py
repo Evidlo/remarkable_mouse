@@ -46,8 +46,6 @@ def create_local_device():
         'version': 54
     }
 
-    # ----- Buttons -----
-
     # Enable buttons supported by the digitizer
     device.enable(libevdev.EV_KEY.BTN_TOOL_PEN)
     device.enable(libevdev.EV_KEY.BTN_TOOL_RUBBER)
@@ -58,81 +56,32 @@ def create_local_device():
     device.enable(libevdev.EV_KEY.BTN_1)
     device.enable(libevdev.EV_KEY.BTN_2)
 
-    # ----- Touch -----
-
-    # Enable Touch input
-    device.enable(
-        libevdev.EV_ABS.ABS_MT_POSITION_X,
-        libevdev.InputAbsInfo(minimum=0, maximum=MT_MAX_ABS_X, resolution=2531) # resolution correct?
-    )
-    device.enable(
-        libevdev.EV_ABS.ABS_MT_POSITION_Y,
-        libevdev.InputAbsInfo(minimum=0, maximum=MT_MAX_ABS_Y, resolution=2531) # resolution correct?
-    )
-    device.enable(
-        libevdev.EV_ABS.ABS_MT_PRESSURE,
-        libevdev.InputAbsInfo(minimum=0, maximum=255)
-    )
-    device.enable(
-        libevdev.EV_ABS.ABS_MT_TOUCH_MAJOR,
-        libevdev.InputAbsInfo(minimum=0, maximum=255)
-    )
-    device.enable(
-        libevdev.EV_ABS.ABS_MT_TOUCH_MINOR,
-        libevdev.InputAbsInfo(minimum=0, maximum=255)
-    )
-    device.enable(
-        libevdev.EV_ABS.ABS_MT_ORIENTATION,
-        libevdev.InputAbsInfo(minimum=-127, maximum=127)
-    )
-    device.enable(
-        libevdev.EV_ABS.ABS_MT_SLOT,
-        libevdev.InputAbsInfo(minimum=0, maximum=31)
-    )
-    device.enable(
-        libevdev.EV_ABS.ABS_MT_TOOL_TYPE,
-        libevdev.InputAbsInfo(minimum=0, maximum=1)
-    )
-    device.enable(
-        libevdev.EV_ABS.ABS_MT_TRACKING_ID,
-        libevdev.InputAbsInfo(minimum=0, maximum=65535)
+    inputs = (
+        # touch inputs
+        (libevdev.EV_ABS.ABS_MT_POSITION_X, 0, 20967, 2531),
+        (libevdev.EV_ABS.ABS_MT_POSITION_Y, 0, 15725, 2531),
+        (libevdev.EV_ABS.ABS_MT_PRESSURE, 0, 255, None),
+        (libevdev.EV_ABS.ABS_MT_TOUCH_MAJOR, 0, 255, None),
+        (libevdev.EV_ABS.ABS_MT_TOUCH_MINOR, 0, 255, None),
+        (libevdev.EV_ABS.ABS_MT_ORIENTATION, -127, 127, None),
+        (libevdev.EV_ABS.ABS_MT_SLOT, 0, 31, None),
+        (libevdev.EV_ABS.ABS_MT_TOOL_TYPE, 0, 1, None),
+        (libevdev.EV_ABS.ABS_MT_TRACKING_ID, 0, 65535, None),
+        # pen inputs
+        (libevdev.EV_ABS.ABS_X, 0, 767, 2531),
+        (libevdev.EV_ABS.ABS_Y, 0, 1023, 2531),
+        (libevdev.EV_ABS.ABS_PRESSURE, 0, 4095, None),
+        (libevdev.EV_ABS.ABS_DISTANCE, 0, 255, None),
+        (libevdev.EV_ABS.ABS_TILT_X, -9000, 9000, None),
+        (libevdev.EV_ABS.ABS_TILT_Y, -9000, 9000, None)
     )
 
-    # ----- Pen -----
-
-    # Enable pen input, tilt and pressure
-    device.enable(
-        libevdev.EV_ABS.ABS_X,
-        libevdev.InputAbsInfo(
-            minimum=0,
-            maximum=MAX_ABS_X,
-            resolution=2531
+    for code, minimum, maximum, resolution in inputs:
+        device.enable(
+            code,
+            libevdev.InputAbsInfo(minimum=minimum, maximum=maximum, resolution=resolution)
         )
-    )
-    device.enable(
-        libevdev.EV_ABS.ABS_Y,
-        libevdev.InputAbsInfo(
-            minimum=0,
-            maximum=MAX_ABS_Y,
-            resolution=2531
-        )
-    )
-    device.enable(
-        libevdev.EV_ABS.ABS_PRESSURE,
-        libevdev.InputAbsInfo(minimum=0, maximum=4095)
-    )
-    device.enable(
-        libevdev.EV_ABS.ABS_DISTANCE,
-        libevdev.InputAbsInfo(minimum=0, maximum=255)
-    )
-    device.enable(
-        libevdev.EV_ABS.ABS_TILT_X,
-        libevdev.InputAbsInfo(minimum=-9000, maximum=9000)
-    )
-    device.enable(
-        libevdev.EV_ABS.ABS_TILT_Y,
-        libevdev.InputAbsInfo(minimum=-9000, maximum=9000)
-    )
+
 
     return device.create_uinput_device()
 
