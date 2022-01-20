@@ -5,6 +5,10 @@ from screeninfo import get_monitors
 import time
 from itertools import cycle
 from socket import timeout as TimeoutError
+import libevdev
+from libevdev import EV_SYN, EV_KEY, EV_ABS
+
+from .common import get_monitor, remap, wacom_width, wacom_height
 
 logging.basicConfig(format='%(message)s')
 log = logging.getLogger('remouse')
@@ -133,160 +137,14 @@ def create_local_device():
     return device.create_uinput_device()
 
 
-# map computer screen coordinates to rM pen coordinates
-def map_comp2pen(x, y, wacom_width, wacom_height, monitor_width,
-          monitor_height, mode, orientation=None):
-
-    if orientation in ('bottom', 'top'):
-        x, y = y, x
-        monitor_width, monitor_height = monitor_height, monitor_width
-
-    ratio_width, ratio_height = wacom_width / monitor_width, wacom_height / monitor_height
-
-    if mode == 'fit':
-        scaling = max(ratio_width, ratio_height)
-    elif mode == 'fill':
-        scaling = min(ratio_width, ratio_height)
-    else:
-        raise NotImplementedError
-
-    return (
-        scaling * (x - (monitor_width - wacom_width / scaling) / 2),
-        scaling * (y - (monitor_height - wacom_height / scaling) / 2)
-    )
-
-# map computer screen coordinates to rM touch coordinates
-def map_comp2touch(x, y, touch_width, touch_height, monitor_width,
-          monitor_height, mode, orientation=None):
-
-    if orientation in ('left', 'right'):
-        x, y = y, x
-        monitor_width, monitor_height = monitor_height, monitor_width
-
-    ratio_width, ratio_height = touch_width / monitor_width, touch_height / monitor_height
-
-    if mode == 'fit':
-        scaling = max(ratio_width, ratio_height)
-    elif mode == 'fill':
-        scaling = min(ratio_width, ratio_height)
-    else:
-        raise NotImplementedError
-
-    return (
-        scaling * (x - (monitor_width - touch_width / scaling) / 2),
-        scaling * (y - (monitor_height - touch_height / scaling) / 2)
-    )
-
-def configure_xinput(*, orientation, monitor, threshold, mode):
-    """
-    Configure screen mapping settings from rM to local machine
-
-    Args:
-        orientation (str): location of charging port relative to screen
-        monitor (int): monitor number to use
-        threshold (int): pressure threshold for detecting pen
-        mode (str): scaling mode when mapping reMarkable pen coordinates to screen
-    """
-
-    # give time for virtual device creation before running xinput commands
-    time.sleep(1)
-
-    # ----- Pen -----
-
-    # set orientation with xinput
-    orientation = {'left': 0, 'bottom': 1, 'top': 2, 'right': 3}[orientation]
-    result = subprocess.run(
-        'xinput --set-prop "reMarkable pen stylus" "Wacom Rotation" {}'.format(orientation),
-        capture_output=True,
-        shell=True
-    )
-    if result.returncode != 0:
-        log.warning("Error setting orientation: %s", result.stderr.decode('utf8'))
-
-    # set monitor to use
-    monitor = get_monitors()[monitor]
-    log.debug('Chose monitor: {}'.format(monitor))
-    result = subprocess.run(
-        'xinput --map-to-output "reMarkable pen stylus" {}'.format(monitor.name),
-        capture_output=True,
-        shell=True
-    )
-    if result.returncode != 0:
-        log.warning("Error setting monitor: %s", result.stderr.decode('utf8'))
-
-    # set stylus pressure
-    result = subprocess.run(
-        'xinput --set-prop "reMarkable pen stylus" "Wacom Pressure Threshold" {}'.format(threshold),
-        capture_output=True,
-        shell=True
-    )
-    if result.returncode != 0:
-        log.warning("Error setting pressure threshold: %s", result.stderr.decode('utf8'))
-
-    # set fitting mode
-    min_x, min_y = map_comp2pen(
-        0, 0,
-        MAX_ABS_X, MAX_ABS_Y, monitor.width, monitor.height,
-        mode,
-        orientation
-    )
-    max_x, max_y = map_comp2pen(
-        monitor.width, monitor.height,
-        MAX_ABS_X, MAX_ABS_Y, monitor.width, monitor.height,
-        mode,
-        orientation
-    )
-    log.debug("Wacom tablet area: {} {} {} {}".format(min_x, min_y, max_x, max_y))
-    result = subprocess.run(
-        'xinput --set-prop "reMarkable pen stylus" "Wacom Tablet Area" \
-        {} {} {} {}'.format(min_x, min_y, max_x, max_y),
-        capture_output=True,
-        shell=True
-    )
-    if result.returncode != 0:
-        log.warning("Error setting fit: %s", result.stderr.decode('utf8'))
-
-    # ----- Touch -----
-
-    # Set touch fitting mode
-    mt_min_x, mt_min_y = map_comp2touch(
-        0, 0,
-        MT_MAX_ABS_X, MT_MAX_ABS_Y, monitor.width, monitor.height,
-        mode,
-        orientation
-    )
-    mt_max_x, mt_max_y = map_comp2touch(
-        monitor.width, monitor.height,
-        MT_MAX_ABS_X, MT_MAX_ABS_Y, monitor.width, monitor.height,
-        mode,
-        orientation
-    )
-    log.debug("Multi-touch area: {} {} {} {}".format(mt_min_x, mt_min_y, mt_max_x * 2, mt_max_y * 2))
-    result = subprocess.run(
-        'xinput --set-prop "reMarkable pen touch" "Wacom Tablet Area" \
-        {} {} {} {}'.format(mt_min_x, mt_min_y, mt_max_x, mt_max_y),
-        capture_output=True,
-        shell=True
-    )
-    if result.returncode != 0:
-        log.warning("Error setting fit: %s", result.stderr.decode('utf8'))
-    result = subprocess.run( # Just need to rotate the touchscreen -90 so that it matches the wacom sensor.
-        'xinput --set-prop "reMarkable pen touch" "Coordinate Transformation Matrix" 0 1 0 -1 0 1 0 0 1',
-        capture_output=True,
-        shell=True
-    )
-    if result.returncode != 0:
-        log.warning("Error setting orientation: %s", result.stderr.decode('utf8'))
-
-
-def read_tablet(rm_inputs, *, orientation, monitor, threshold, mode):
+def read_tablet(rm_inputs, *, orientation, monitor_num, region, threshold, mode):
     """Pipe rM evdev events to local device
 
     Args:
         rm_inputs (dictionary of paramiko.ChannelFile): dict of pen, button
             and touch input streams
         orientation (str): tablet orientation
-        monitor (int): monitor number to map to
+        monitor_num (int): monitor number to map to
         threshold (int): pressure threshold
         mode (str): mapping mode
     """
@@ -294,16 +152,11 @@ def read_tablet(rm_inputs, *, orientation, monitor, threshold, mode):
     local_device = create_local_device()
     log.debug("Created virtual input device '{}'".format(local_device.devnode))
 
-    configure_xinput(
-        orientation=orientation,
-        monitor=monitor,
-        threshold=threshold,
-        mode=mode,
-    )
-
-    import libevdev
+    monitor = get_monitor(region, monitor_num, orientation)
 
     pending_events = []
+
+    x = y = 0
 
     # loop inputs forever
     # for input_name, stream in cycle(rm_inputs.items()):
@@ -317,9 +170,31 @@ def read_tablet(rm_inputs, *, orientation, monitor, threshold, mode):
         e_time, e_millis, e_type, e_code, e_value = struct.unpack('2IHHi', data)
 
         e_bit = libevdev.evbit(e_type, e_code)
-        event = libevdev.InputEvent(e_bit, value=e_value)
+        e = libevdev.InputEvent(e_bit, value=e_value)
 
-        local_device.send_events([event])
+        local_device.send_events([e])
+
+        if e.matches(EV_ABS):
+
+            # handle x direction
+            if e.matches(EV_ABS.ABS_Y):
+                x = e.value
+
+            # handle y direction
+            if e.matches(EV_ABS.ABS_X):
+                y = e.value
+
+        elif e.matches(EV_SYN):
+            mapped_x, mapped_y = remap(
+                x, y,
+                wacom_width, wacom_height,
+                monitor.width, monitor.height,
+                mode, orientation
+            )
+            local_device.send_events([e])
+
+        else:
+            local_device.send_events([e])
 
         # While debug mode is active, we log events grouped together between
         # SYN_REPORT events. Pending events for the next log are stored here
@@ -327,8 +202,8 @@ def read_tablet(rm_inputs, *, orientation, monitor, threshold, mode):
             if e_bit == libevdev.EV_SYN.SYN_REPORT:
                 event_repr = ', '.join(
                     '{} = {}'.format(
-                        event.code.name,
-                        event.value
+                        e.code.name,
+                        e.value
                     ) for event in pending_events
                 )
                 log.debug('{}.{:0>6} - {}'.format(e_time, e_millis, event_repr))
