@@ -26,12 +26,19 @@ specify address, monitor, orientation, password
 ``` bash
 remouse --address 192.168.1.1 --orientation right --mode fit --monitor 1 --password foobar
 ```
+
 passwordless login
 
 ``` bash
 ssh-keygen -m PEM -t rsa -f ~/.ssh/remarkable -N ''
 ssh-copy-id -i ~/.ssh/remarkable.pub root@10.11.99.1
-remouse --key ~/.ssh/remarkable
+remouse
+```
+
+running with pressure sensitivity (Linux only)
+
+``` bash
+sudo --preserve-env=PATH env remouse --evdev
 ```
 
 # Usage
