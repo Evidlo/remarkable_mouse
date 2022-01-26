@@ -13,18 +13,6 @@ from .common import get_monitor, remap, wacom_width, wacom_height
 logging.basicConfig(format='%(message)s')
 log = logging.getLogger('remouse')
 
-# Maximum value that can be reported by the Wacom driver for the X axis
-MAX_ABS_X = 20967
-
-# Maximum value that can be reported by the Wacom driver for the Y axis
-MAX_ABS_Y = 15725
-
-# Maximum value that can be reported by the cyttsp5_mt driver for the X axis
-MT_MAX_ABS_X = 767
-
-# Maximum value that can be reported by the cyttsp5_mt driver for the Y axis
-MT_MAX_ABS_Y = 1023
-
 def create_local_device():
     """
     Create a virtual input device on this host that has the same
@@ -58,30 +46,32 @@ def create_local_device():
 
     inputs = (
         # touch inputs
-        (libevdev.EV_ABS.ABS_MT_POSITION_X, 0, 20967, 2531),
-        (libevdev.EV_ABS.ABS_MT_POSITION_Y, 0, 15725, 2531),
-        (libevdev.EV_ABS.ABS_MT_PRESSURE, 0, 255, None),
-        (libevdev.EV_ABS.ABS_MT_TOUCH_MAJOR, 0, 255, None),
-        (libevdev.EV_ABS.ABS_MT_TOUCH_MINOR, 0, 255, None),
-        (libevdev.EV_ABS.ABS_MT_ORIENTATION, -127, 127, None),
-        (libevdev.EV_ABS.ABS_MT_SLOT, 0, 31, None),
-        (libevdev.EV_ABS.ABS_MT_TOOL_TYPE, 0, 1, None),
-        (libevdev.EV_ABS.ABS_MT_TRACKING_ID, 0, 65535, None),
+        (libevdev.EV_ABS.ABS_MT_POSITION_X,  0,    20967, 2531),
+        (libevdev.EV_ABS.ABS_MT_POSITION_Y,  0,    15725, 2531),
+        (libevdev.EV_ABS.ABS_MT_PRESSURE,    0,    255,   None),
+        (libevdev.EV_ABS.ABS_MT_TOUCH_MAJOR, 0,    255,   None),
+        (libevdev.EV_ABS.ABS_MT_TOUCH_MINOR, 0,    255,   None),
+        (libevdev.EV_ABS.ABS_MT_ORIENTATION, -127, 127,   None),
+        (libevdev.EV_ABS.ABS_MT_SLOT,        0,    31,    None),
+        (libevdev.EV_ABS.ABS_MT_TOOL_TYPE,   0,    1,     None),
+        (libevdev.EV_ABS.ABS_MT_TRACKING_ID, 0,    65535, None),
+
         # pen inputs
-        (libevdev.EV_ABS.ABS_X, 0, 767, 2531),
-        (libevdev.EV_ABS.ABS_Y, 0, 1023, 2531),
-        (libevdev.EV_ABS.ABS_PRESSURE, 0, 4095, None),
-        (libevdev.EV_ABS.ABS_DISTANCE, 0, 255, None),
-        (libevdev.EV_ABS.ABS_TILT_X, -9000, 9000, None),
-        (libevdev.EV_ABS.ABS_TILT_Y, -9000, 9000, None)
+        (libevdev.EV_ABS.ABS_X,        0,     767,  2531), # cyttps5_mt driver
+        (libevdev.EV_ABS.ABS_Y,        0,     1023, 2531), # cyttsp5_mt
+        (libevdev.EV_ABS.ABS_PRESSURE, 0,     4095, None),
+        (libevdev.EV_ABS.ABS_DISTANCE, 0,     255,  None),
+        (libevdev.EV_ABS.ABS_TILT_X,   -9000, 9000, None),
+        (libevdev.EV_ABS.ABS_TILT_Y,   -9000, 9000, None)
     )
 
     for code, minimum, maximum, resolution in inputs:
         device.enable(
             code,
-            libevdev.InputAbsInfo(minimum=minimum, maximum=maximum, resolution=resolution)
+            libevdev.InputAbsInfo(
+                minimum=minimum, maximum=maximum, resolution=resolution
+            )
         )
-
 
     return device.create_uinput_device()
 
