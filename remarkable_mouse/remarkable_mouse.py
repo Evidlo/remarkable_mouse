@@ -41,16 +41,19 @@ def open_rm_inputs(*, address, key, password):
     agent = paramiko.agent.Agent()
 
     def use_key(key):
-        try:
-            pkey = paramiko.RSAKey.from_private_key_file(os.path.expanduser(key))
-        except paramiko.ssh_exception.PasswordRequiredException:
-            passphrase = getpass(
-                "Enter passphrase for key '{}': ".format(os.path.expanduser(key))
-            )
-            pkey = paramiko.RSAKey.from_private_key_file(
-                os.path.expanduser(key),
-                password=passphrase
-            )
+        for key_type in [paramiko.RSAKey, paramiko.Ed25519Key, paramiko.ECDSAKey]:
+            try:
+                pkey = key_type.from_private_key_file(os.path.expanduser(key))
+            except paramiko.ssh_exception.SSHException:
+                continue
+            except paramiko.ssh_exception.PasswordRequiredException:
+                passphrase = getpass(
+                    "Enter passphrase for key '{}': ".format(os.path.expanduser(key))
+                )
+                pkey = paramiko.RSAKey.from_private_key_file(
+                    os.path.expanduser(key), password=passphrase
+                )
+                break
         return pkey
 
     if key is not None:
