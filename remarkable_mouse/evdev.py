@@ -7,8 +7,8 @@ from itertools import cycle
 from socket import timeout as TimeoutError
 import libevdev
 
-from .codes import EV_SYN, EV_ABS, ABS_X, ABS_Y, SYN_REPORT
-from .common import get_monitor, remap, wacom_width, wacom_height
+from .codes import codes, types
+from .common import get_monitor, remap, wacom_width, wacom_height, log_event
 
 logging.basicConfig(format='%(message)s')
 log = logging.getLogger('remouse')
@@ -46,8 +46,8 @@ def create_local_device():
 
     inputs = (
         # touch inputs
-        (libevdev.EV_ABS.ABS_MT_POSITION_X,  0,    20967, 2531),
-        (libevdev.EV_ABS.ABS_MT_POSITION_Y,  0,    15725, 2531),
+        (libevdev.EV_ABS.ABS_MT_POSITION_X,  0,    767,   2531),
+        (libevdev.EV_ABS.ABS_MT_POSITION_Y,  0,    1023,  2531),
         (libevdev.EV_ABS.ABS_MT_PRESSURE,    0,    255,   None),
         (libevdev.EV_ABS.ABS_MT_TOUCH_MAJOR, 0,    255,   None),
         (libevdev.EV_ABS.ABS_MT_TOUCH_MINOR, 0,    255,   None),
@@ -57,12 +57,12 @@ def create_local_device():
         (libevdev.EV_ABS.ABS_MT_TRACKING_ID, 0,    65535, None),
 
         # pen inputs
-        (libevdev.EV_ABS.ABS_X,        0,     767,  2531), # cyttps5_mt driver
-        (libevdev.EV_ABS.ABS_Y,        0,     1023, 2531), # cyttsp5_mt
-        (libevdev.EV_ABS.ABS_PRESSURE, 0,     4095, None),
-        (libevdev.EV_ABS.ABS_DISTANCE, 0,     255,  None),
-        (libevdev.EV_ABS.ABS_TILT_X,   -9000, 9000, None),
-        (libevdev.EV_ABS.ABS_TILT_Y,   -9000, 9000, None)
+        (libevdev.EV_ABS.ABS_X,        0,     20967,  2531), # cyttps5_mt driver
+        (libevdev.EV_ABS.ABS_Y,        0,     15725,  2531), # cyttsp5_mt
+        (libevdev.EV_ABS.ABS_PRESSURE, 0,     4095,   None),
+        (libevdev.EV_ABS.ABS_DISTANCE, 0,     255,    None),
+        (libevdev.EV_ABS.ABS_TILT_X,   -9000, 9000,   None),
+        (libevdev.EV_ABS.ABS_TILT_Y,   -9000, 9000,   None)
     )
 
     for code, minimum, maximum, resolution in inputs:
@@ -108,46 +108,36 @@ def read_tablet(rm_inputs, *, orientation, monitor_num, region, threshold, mode)
 
         e_time, e_millis, e_type, e_code, e_value = struct.unpack('2IHHi', data)
 
-        e_bit = libevdev.evbit(e_type, e_code)
-        e = libevdev.InputEvent(e_bit, value=e_value)
-
-        local_device.send_events([e])
-
-        if e_type == EV_ABS:
-
+        # intercept EV_ABS events and modify coordinates
+        if types[e_type] == 'EV_ABS':
             # handle x direction
-            if e_code == ABS_Y:
+            if codes[e_type][e_code] == 'ABS_Y':
                 x = e_value
 
             # handle y direction
-            if e_code == ABS_X:
+            if codes[e_type][e_code] == 'ABS_X':
                 y = e_value
 
-        elif e_type == EV_SYN:
             mapped_x, mapped_y = remap(
                 x, y,
                 wacom_width, wacom_height,
                 monitor.width, monitor.height,
                 mode, orientation
             )
-            local_device.send_events([e])
-            print('sent')
-            print(e_type)
 
-        else:
-            local_device.send_events([e])
+            # FIXME - something wrong with remapping
+            # handle x direction
+            # if codes[e_type][e_code] == 'ABS_Y':
+            #     e_value = int(mapped_x)
 
-        # While debug mode is active, we log events grouped together between
-        # SYN_REPORT events. Pending events for the next log are stored here
-        # if log.level == logging.DEBUG:
-        #     if e_bit == SYN_REPORT:
-        #         event_repr = ', '.join(
-        #             '{} = {}'.format(
-        #                 e.code.name,
-        #                 e.value
-        #             ) for event in pending_events
-        #         )
-        #         log.debug('{}.{:0>6} - {}'.format(e_time, e_millis, event_repr))
-        #         pending_events = []
-        #     else:
-        #         pending_events.append(event)
+            # # handle y direction
+            # if codes[e_type][e_code] == 'ABS_X':
+            #     e_value = int(mapped_y)
+
+        # pass events directly to libevdev
+        e_bit = libevdev.evbit(e_type, e_code)
+        e = libevdev.InputEvent(e_bit, value=e_value)
+        local_device.send_events([e])
+
+        if log.level == logging.DEBUG:
+            log_event(e_time, e_millis, e_type, e_code, e_value)

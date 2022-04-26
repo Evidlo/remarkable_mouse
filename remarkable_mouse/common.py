@@ -4,6 +4,8 @@ import logging
 import sys
 from screeninfo import get_monitors, Monitor
 
+from .codes import codes, types
+
 logging.basicConfig(format='%(message)s')
 log = logging.getLogger('remouse')
 
@@ -130,3 +132,13 @@ def remap(x, y, wacom_width, wacom_height, monitor_width,
         scaling_x * (x - (wacom_width - monitor_width / scaling_x) / 2),
         scaling_y * (y - (wacom_height - monitor_height / scaling_y) / 2)
     )
+
+# log evdev event to console
+def log_event(e_time, e_millis, e_type, e_code, e_value):
+    log.debug('{}.{:0>6} - {: <9} {: <15} {: >6}'.format(
+        e_time,
+        e_millis,
+        types[e_type],
+        codes[e_type][e_code],
+        e_value
+    ))
