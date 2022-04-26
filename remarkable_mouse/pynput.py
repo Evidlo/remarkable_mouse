@@ -1,9 +1,8 @@
 import logging
 import struct
 from screeninfo import get_monitors
-import libevdev
-from libevdev import EV_SYN, EV_KEY, EV_ABS
 
+from .codes import EV_SYN, EV_ABS, ABS_X, ABS_Y, BTN_TOUCH
 from .common import get_monitor, remap, wacom_width, wacom_height
 
 logging.basicConfig(format='%(message)s')
@@ -39,32 +38,29 @@ def read_tablet(rm_inputs, *, orientation, monitor_num, region, threshold, mode)
     while True:
         _, _, e_type, e_code, e_value = struct.unpack('2IHHi', rm_inputs['pen'].read(16))
 
-        e_bit = libevdev.evbit(e_type, e_code)
-        e = libevdev.InputEvent(e_bit, value=e_value)
-
-        if e.matches(EV_ABS):
+        if e_type == EV_ABS:
 
             # handle x direction
-            if e.matches(EV_ABS.ABS_Y):
-                log.debug(e.value)
-                x = e.value
+            if e_code == ABS_Y:
+                log.debug(e_value)
+                x = e_value
 
             # handle y direction
-            if e.matches(EV_ABS.ABS_X):
-                log.debug('\t{}'.format(e.value))
-                y = e.value
+            if e_code == ABS_X:
+                log.debug('\t{}'.format(e_value))
+                y = e_value
 
         # handle draw
-        if e.matches(EV_KEY.BTN_TOUCH):
-            log.debug('\t\t{}'.format(e.value))
-            if e.value == 1:
+        if e_code == BTN_TOUCH:
+            log.debug('\t\t{}'.format(e_value))
+            if e_value == 1:
                 log.debug('PRESS')
                 mouse.press(Button.left)
             else:
                 log.debug('RELEASE')
                 mouse.release(Button.left)
 
-        if e.matches(EV_SYN):
+        if e_type == EV_SYN:
             mapped_x, mapped_y = remap(
                 x, y,
                 wacom_width, wacom_height,

@@ -6,8 +6,8 @@ import time
 from itertools import cycle
 from socket import timeout as TimeoutError
 import libevdev
-from libevdev import EV_SYN, EV_KEY, EV_ABS
 
+from .codes import EV_SYN, EV_ABS, ABS_X, ABS_Y, SYN_REPORT
 from .common import get_monitor, remap, wacom_width, wacom_height
 
 logging.basicConfig(format='%(message)s')
@@ -113,17 +113,17 @@ def read_tablet(rm_inputs, *, orientation, monitor_num, region, threshold, mode)
 
         local_device.send_events([e])
 
-        if e.matches(EV_ABS):
+        if e_type == EV_ABS:
 
             # handle x direction
-            if e.matches(EV_ABS.ABS_Y):
-                x = e.value
+            if e_code == ABS_Y:
+                x = e_value
 
             # handle y direction
-            if e.matches(EV_ABS.ABS_X):
-                y = e.value
+            if e_code == ABS_X:
+                y = e_value
 
-        elif e.matches(EV_SYN):
+        elif e_type == EV_SYN:
             mapped_x, mapped_y = remap(
                 x, y,
                 wacom_width, wacom_height,
@@ -131,22 +131,23 @@ def read_tablet(rm_inputs, *, orientation, monitor_num, region, threshold, mode)
                 mode, orientation
             )
             local_device.send_events([e])
+            print('sent')
+            print(e_type)
 
         else:
             local_device.send_events([e])
 
         # While debug mode is active, we log events grouped together between
         # SYN_REPORT events. Pending events for the next log are stored here
-        if log.level == logging.DEBUG:
-            if e_bit == libevdev.EV_SYN.SYN_REPORT:
-                event_repr = ', '.join(
-                    '{} = {}'.format(
-                        e.code.name,
-                        e.value
-                    ) for event in pending_events
-                )
-                log.debug('{}.{:0>6} - {}'.format(e_time, e_millis, event_repr))
-                pending_events = []
-            else:
-                pending_events.append(event)
-
+        # if log.level == logging.DEBUG:
+        #     if e_bit == SYN_REPORT:
+        #         event_repr = ', '.join(
+        #             '{} = {}'.format(
+        #                 e.code.name,
+        #                 e.value
+        #             ) for event in pending_events
+        #         )
+        #         log.debug('{}.{:0>6} - {}'.format(e_time, e_millis, event_repr))
+        #         pending_events = []
+        #     else:
+        #         pending_events.append(event)
