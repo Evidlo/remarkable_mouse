@@ -47,22 +47,17 @@ def read_tablet(rm_inputs, *, orientation, monitor_num, region, threshold, mode)
 
         # handle x direction
         if codes[e_type][e_code] == 'ABS_Y':
-            log.debug(e_value)
             x = e_value
 
         # handle y direction
         if codes[e_type][e_code] == 'ABS_X':
-            log.debug('\t{}'.format(e_value))
             y = e_value
 
         # handle draw
         if codes[e_type][e_code] == 'BTN_TOUCH':
-            log.debug('\t\t{}'.format(e_value))
             if e_value == 1:
-                log.debug('PRESS')
                 mouse.press(Button.left)
             else:
-                log.debug('RELEASE')
                 mouse.release(Button.left)
 
         if codes[e_type][e_code] == 'SYN_REPORT':
