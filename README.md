@@ -38,7 +38,7 @@ remouse
 running with pressure sensitivity (Linux only)
 
 ``` bash
-sudo --preserve-env=PATH env remouse --evdev
+sudo --preserve-env=USER,PATH env remouse --evdev
 ```
 
 # Usage
@@ -65,3 +65,4 @@ optional arguments:
   --threshold THRESH    stylus pressure threshold (default 600)
   --evdev               use evdev to support pen pressure (requires root, Linux only)
 ```
+
