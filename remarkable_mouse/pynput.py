@@ -31,7 +31,7 @@ def read_tablet(rm_inputs, *, orientation, monitor_num, region, threshold, mode)
 
     mouse = Controller()
 
-    monitor = get_monitor(region, monitor_num, orientation)
+    monitor, _ = get_monitor(region, monitor_num, orientation)
     log.debug('Chose monitor: {}'.format(monitor))
 
     x = y = 0
@@ -64,12 +64,13 @@ def read_tablet(rm_inputs, *, orientation, monitor_num, region, threshold, mode)
             mapped_x, mapped_y = remap(
                 x, y,
                 wacom_width, wacom_height,
+                monitor.x, monitor.y,
                 monitor.width, monitor.height,
                 mode, orientation
             )
             mouse.move(
-                monitor.x + mapped_x - mouse.position[0],
-                monitor.y + mapped_y - mouse.position[1]
+                mapped_x - mouse.position[0],
+                mapped_y - mouse.position[1]
             )
 
         if log.level == logging.DEBUG:

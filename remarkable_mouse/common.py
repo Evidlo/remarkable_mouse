@@ -23,7 +23,16 @@ def get_monitor(region, monitor_num, orientation):
 
     Returns:
         screeninfo.Monitor
+        (width, height): total size of all screens put together
     """
+
+    # compute total size of all screens
+    max_x, max_y = 0, 0
+    for m in get_monitors():
+        x = m.x + m.width
+        y = m.y + m.height
+        max_x = max(x, max_x)
+        max_y = max(y, max_y)
 
     if region:
         x, y, width, height = get_region(orientation)
@@ -34,7 +43,9 @@ def get_monitor(region, monitor_num, orientation):
     else:
         monitor = get_monitors()[monitor_num]
 
-    return monitor
+    log.debug(f"Chose monitor: {monitor}")
+    log.debug(f"Screen size: ({max_x}, {max_y})")
+    return monitor, (max_x, max_y)
 
 def get_region(orientation):
     """ Show tkwindow to user to select mouse bounds
@@ -100,8 +111,10 @@ def get_region(orientation):
 
 
 # remap wacom coordinates to screen coordinates
-def remap(x, y, wacom_width, wacom_height, monitor_width,
-          monitor_height, mode, orientation):
+def remap(
+        x, y, wacom_width, wacom_height,
+        mon_x, mon_y, mon_width, mon_height,
+        mode, orientation):
 
     if orientation == 'bottom':
         y = wacom_height - y
@@ -114,7 +127,7 @@ def remap(x, y, wacom_width, wacom_height, monitor_width,
     elif orientation == 'top':
         x = wacom_width - x
 
-    ratio_width, ratio_height = monitor_width / wacom_width, monitor_height / wacom_height
+    ratio_width, ratio_height = mon_width / wacom_width, mon_height / wacom_height
 
     if mode == 'fill':
         scaling_x = max(ratio_width, ratio_height)
@@ -128,9 +141,53 @@ def remap(x, y, wacom_width, wacom_height, monitor_width,
     else:
         raise NotImplementedError
 
+    # import ipdb
+    # ipdb.set_trace()
+
     return (
-        scaling_x * (x - (wacom_width - monitor_width / scaling_x) / 2),
-        scaling_y * (y - (wacom_height - monitor_height / scaling_y) / 2)
+        scaling_x * (x - (wacom_width - mon_width / scaling_x) / 2) + mon_x,
+        scaling_y * (y - (wacom_height - mon_height / scaling_y) / 2) + mon_y
+    )
+
+# remap wacom coordinates to screen coordinates
+def remap_evdev(
+        x, y, wacom_width, wacom_height,
+        mon_x, mon_y, mon_width, mon_height,
+        x_distortion, mode, orientation):
+
+    if orientation == 'bottom':
+        y = wacom_height - y
+    elif orientation == 'right':
+        x, y = wacom_height - y, wacom_width - x
+        wacom_width, wacom_height = wacom_height, wacom_width
+    elif orientation == 'left':
+        pass
+    elif orientation == 'top':
+        x = wacom_width - x
+
+    mon_width *= x_distortion
+    mon_height /= x_distortion
+    ratio_width = mon_width / wacom_width
+    ratio_height = mon_height / wacom_height
+
+    if mode == 'fill':
+        scaling_x = max(ratio_width, ratio_height)
+        scaling_y = scaling_x
+    elif mode == 'fit':
+        scaling_x = min(ratio_width, ratio_height)
+        scaling_y = scaling_x
+    elif mode == 'stretch':
+        scaling_x = ratio_width
+        scaling_y = ratio_height
+    else:
+        raise NotImplementedError
+
+    # import ipdb
+    # ipdb.set_trace()
+
+    return (
+        scaling_x * (x - (wacom_width - mon_width / scaling_x) / 2) + mon_x,
+        scaling_y * (y - (wacom_height - mon_height / scaling_y) / 2) + mon_y
     )
 
 # log evdev event to console

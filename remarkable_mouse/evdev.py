@@ -8,10 +8,13 @@ from socket import timeout as TimeoutError
 import libevdev
 
 from .codes import codes, types
-from .common import get_monitor, remap, wacom_width, wacom_height, log_event
+from .common import get_monitor, remap_evdev, wacom_width, wacom_height, log_event
 
 logging.basicConfig(format='%(message)s')
 log = logging.getLogger('remouse')
+
+evdev_max_x = 20967
+evdev_max_y = 15725
 
 def create_local_device():
     """
@@ -91,7 +94,10 @@ def read_tablet(rm_inputs, *, orientation, monitor_num, region, threshold, mode)
     local_device = create_local_device()
     log.debug("Created virtual input device '{}'".format(local_device.devnode))
 
-    monitor = get_monitor(region, monitor_num, orientation)
+    monitor, (tot_x, tot_y) = get_monitor(region, monitor_num, orientation)
+
+    mon2wacom_x = wacom_height / tot_x
+    mon2wacom_y = wacom_width / tot_y
 
     pending_events = []
 
@@ -112,27 +118,40 @@ def read_tablet(rm_inputs, *, orientation, monitor_num, region, threshold, mode)
         if types[e_type] == 'EV_ABS':
             # handle x direction
             if codes[e_type][e_code] == 'ABS_Y':
-                x = e_value
+                y = e_value
 
             # handle y direction
             if codes[e_type][e_code] == 'ABS_X':
-                y = e_value
+                x = e_value
 
-            mapped_x, mapped_y = remap(
-                x, y,
-                wacom_width, wacom_height,
+            mapped_x = x / mon2wacom_x
+            mapped_y = y / mon2wacom_y
+
+            print(f'x: {x:5.0f}/{wacom_height} → {mapped_x:5.0f}/{tot_x}', end='')
+            print(f'   y: {y:5.0f}/{wacom_width} → {mapped_y:5.0f}/{tot_y}')
+
+
+            mapped_x, mapped_y = remap_evdev(
+                mapped_x, mapped_y,
+                tot_x, tot_y,
+                monitor.x, monitor.y,
                 monitor.width, monitor.height,
-                mode, orientation
+                mon2wacom_x / mon2wacom_y,
+                mode, orientation,
             )
+
+            mapped_x *= mon2wacom_x
+            mapped_y *= mon2wacom_y
+
 
             # FIXME - something wrong with remapping
             # handle x direction
-            # if codes[e_type][e_code] == 'ABS_Y':
-            #     e_value = int(mapped_x)
+            if codes[e_type][e_code] == 'ABS_Y':
+                e_value = int(mapped_y)
 
-            # # handle y direction
-            # if codes[e_type][e_code] == 'ABS_X':
-            #     e_value = int(mapped_y)
+            # handle y direction
+            if codes[e_type][e_code] == 'ABS_X':
+                e_value = int(mapped_x)
 
         # pass events directly to libevdev
         e_bit = libevdev.evbit(e_type, e_code)
