@@ -9,8 +9,8 @@ from .codes import codes, types
 logging.basicConfig(format='%(message)s')
 log = logging.getLogger('remouse')
 
-wacom_width = 15725
-wacom_height = 20967
+wacom_max_y = 15725
+wacom_max_x = 20967
 
 def get_monitor(region, monitor_num, orientation):
     """ Get info of where we want to map the tablet to
@@ -23,7 +23,16 @@ def get_monitor(region, monitor_num, orientation):
 
     Returns:
         screeninfo.Monitor
+        (width, height): total size of all screens put together
     """
+
+    # compute size of box encompassing all screens
+    max_x, max_y = 0, 0
+    for m in get_monitors():
+        x = m.x + m.width
+        y = m.y + m.height
+        max_x = max(x, max_x)
+        max_y = max(y, max_y)
 
     if region:
         x, y, width, height = get_region(orientation)
@@ -34,7 +43,9 @@ def get_monitor(region, monitor_num, orientation):
     else:
         monitor = get_monitors()[monitor_num]
 
-    return monitor
+    log.debug(f"Chose monitor: {monitor}")
+    log.debug(f"Screen size: ({max_x}, {max_y})")
+    return monitor, (max_x, max_y)
 
 def get_region(orientation):
     """ Show tkwindow to user to select mouse bounds
@@ -100,21 +111,21 @@ def get_region(orientation):
 
 
 # remap wacom coordinates to screen coordinates
-def remap(x, y, wacom_width, wacom_height, monitor_width,
+def remap(x, y, wacom_max_x, wacom_max_y, monitor_width,
           monitor_height, mode, orientation):
 
+    if orientation == 'right':
+        x, y = wacom_max_x - x, wacom_max_y - y
+    if orientation == 'left':
+        pass
+    if orientation == 'top':
+       x, y = wacom_max_y - y, x
+       wacom_max_x, wacom_max_y = wacom_max_y, wacom_max_x
     if orientation == 'bottom':
-        y = wacom_height - y
-    elif orientation == 'right':
-        x, y = wacom_height - y, wacom_width - x
-        wacom_width, wacom_height = wacom_height, wacom_width
-    elif orientation == 'left':
-        x, y = y, x
-        wacom_width, wacom_height = wacom_height, wacom_width
-    elif orientation == 'top':
-        x = wacom_width - x
+       x, y = y, wacom_max_x - x
+       wacom_max_x, wacom_max_y = wacom_max_y, wacom_max_x
 
-    ratio_width, ratio_height = monitor_width / wacom_width, monitor_height / wacom_height
+    ratio_width, ratio_height = monitor_width / wacom_max_x, monitor_height / wacom_max_y
 
     if mode == 'fill':
         scaling_x = max(ratio_width, ratio_height)
@@ -129,8 +140,8 @@ def remap(x, y, wacom_width, wacom_height, monitor_width,
         raise NotImplementedError
 
     return (
-        scaling_x * (x - (wacom_width - monitor_width / scaling_x) / 2),
-        scaling_y * (y - (wacom_height - monitor_height / scaling_y) / 2)
+        scaling_x * (x - (wacom_max_x - monitor_width / scaling_x) / 2),
+        scaling_y * (y - (wacom_max_y - monitor_height / scaling_y) / 2)
     )
 
 # log evdev event to console

@@ -4,7 +4,7 @@ from screeninfo import get_monitors
 
 # from .codes import EV_SYN, EV_ABS, ABS_X, ABS_Y, BTN_TOUCH
 from .codes import codes
-from .common import get_monitor, remap, wacom_width, wacom_height, log_event
+from .common import get_monitor, remap, wacom_max_x, wacom_max_y, log_event
 
 logging.basicConfig(format='%(message)s')
 log = logging.getLogger('remouse')
@@ -31,7 +31,7 @@ def read_tablet(rm_inputs, *, orientation, monitor_num, region, threshold, mode)
 
     mouse = Controller()
 
-    monitor = get_monitor(region, monitor_num, orientation)
+    monitor, _ = get_monitor(region, monitor_num, orientation)
     log.debug('Chose monitor: {}'.format(monitor))
 
     x = y = 0
@@ -46,11 +46,11 @@ def read_tablet(rm_inputs, *, orientation, monitor_num, region, threshold, mode)
         e_time, e_millis, e_type, e_code, e_value = struct.unpack('2IHHi', data)
 
         # handle x direction
-        if codes[e_type][e_code] == 'ABS_Y':
+        if codes[e_type][e_code] == 'ABS_X':
             x = e_value
 
         # handle y direction
-        if codes[e_type][e_code] == 'ABS_X':
+        if codes[e_type][e_code] == 'ABS_Y':
             y = e_value
 
         # handle draw
@@ -63,9 +63,9 @@ def read_tablet(rm_inputs, *, orientation, monitor_num, region, threshold, mode)
         if codes[e_type][e_code] == 'SYN_REPORT':
             mapped_x, mapped_y = remap(
                 x, y,
-                wacom_width, wacom_height,
+                wacom_max_x, wacom_max_y,
                 monitor.width, monitor.height,
-                mode, orientation
+                mode, orientation,
             )
             mouse.move(
                 monitor.x + mapped_x - mouse.position[0],

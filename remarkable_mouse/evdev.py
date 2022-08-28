@@ -8,7 +8,7 @@ from socket import timeout as TimeoutError
 import libevdev
 
 from .codes import codes, types
-from .common import get_monitor, remap, wacom_width, wacom_height, log_event
+from .common import get_monitor, remap, wacom_max_x, wacom_max_y, log_event
 
 logging.basicConfig(format='%(message)s')
 log = logging.getLogger('remouse')
@@ -91,7 +91,7 @@ def read_tablet(rm_inputs, *, orientation, monitor_num, region, threshold, mode)
     local_device = create_local_device()
     log.debug("Created virtual input device '{}'".format(local_device.devnode))
 
-    monitor = get_monitor(region, monitor_num, orientation)
+    monitor, (tot_width, tot_height) = get_monitor(region, monitor_num, orientation)
 
     pending_events = []
 
@@ -111,28 +111,28 @@ def read_tablet(rm_inputs, *, orientation, monitor_num, region, threshold, mode)
         # intercept EV_ABS events and modify coordinates
         if types[e_type] == 'EV_ABS':
             # handle x direction
-            if codes[e_type][e_code] == 'ABS_Y':
+            if codes[e_type][e_code] == 'ABS_X':
                 x = e_value
 
             # handle y direction
-            if codes[e_type][e_code] == 'ABS_X':
+            if codes[e_type][e_code] == 'ABS_Y':
                 y = e_value
 
             mapped_x, mapped_y = remap(
                 x, y,
-                wacom_width, wacom_height,
-                monitor.width, monitor.height,
+                wacom_max_x, wacom_max_y,
+                wacom_max_x * (monitor.width / tot_width), wacom_max_y * (monitor.height / tot_height),
                 mode, orientation
             )
 
-            # FIXME - something wrong with remapping
-            # handle x direction
-            # if codes[e_type][e_code] == 'ABS_Y':
-            #     e_value = int(mapped_x)
+            mapped_x += wacom_max_x * (monitor.x / tot_width)
+            mapped_y += wacom_max_y * (monitor.y / tot_height)
 
-            # # handle y direction
-            # if codes[e_type][e_code] == 'ABS_X':
-            #     e_value = int(mapped_y)
+            # reinsert modified values into evdev event
+            if codes[e_type][e_code] == 'ABS_X':
+                e_value = int(mapped_x)
+            if codes[e_type][e_code] == 'ABS_Y':
+                e_value = int(mapped_y)
 
         # pass events directly to libevdev
         e_bit = libevdev.evbit(e_type, e_code)
