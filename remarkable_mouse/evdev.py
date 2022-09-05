@@ -118,15 +118,20 @@ def read_tablet(rm_inputs, *, orientation, monitor_num, region, threshold, mode)
             if codes[e_type][e_code] == 'ABS_Y':
                 y = e_value
 
+            # map to screen coordinates so that region/monitor/orientation options are applied
             mapped_x, mapped_y = remap(
                 x, y,
                 wacom_max_x, wacom_max_y,
-                wacom_max_x * (monitor.width / tot_width), wacom_max_y * (monitor.height / tot_height),
+                monitor.width, monitor.height,
                 mode, orientation
             )
 
-            mapped_x += wacom_max_x * (monitor.x / tot_width)
-            mapped_y += wacom_max_y * (monitor.y / tot_height)
+            mapped_x += monitor.x
+            mapped_y += monitor.y
+
+            # map back to wacom coordinates to reinsert into event
+            mapped_x = mapped_x * wacom_max_x / tot_width
+            mapped_y = mapped_y * wacom_max_y / tot_height
 
             # reinsert modified values into evdev event
             if codes[e_type][e_code] == 'ABS_X':
