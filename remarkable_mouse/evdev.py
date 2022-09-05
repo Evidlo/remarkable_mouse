@@ -46,9 +46,9 @@ def create_local_device():
 
     inputs = (
         # touch inputs
-        (libevdev.EV_ABS.ABS_MT_POSITION_X,  0,    767,   2531),
-        (libevdev.EV_ABS.ABS_MT_POSITION_Y,  0,    1023,  2531),
-        (libevdev.EV_ABS.ABS_MT_PRESSURE,    0,    255,   None),
+        (libevdev.EV_ABS.ABS_MT_POSITION_X,  0,    20967,   2531),
+        (libevdev.EV_ABS.ABS_MT_POSITION_Y,  0,    15725,  2531),
+        (libevdev.EV_ABS.ABS_MT_PRESSURE,    0,    4095,   None),
         (libevdev.EV_ABS.ABS_MT_TOUCH_MAJOR, 0,    255,   None),
         (libevdev.EV_ABS.ABS_MT_TOUCH_MINOR, 0,    255,   None),
         (libevdev.EV_ABS.ABS_MT_ORIENTATION, -127, 127,   None),
