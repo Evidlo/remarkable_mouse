@@ -11,11 +11,13 @@ from itertools import cycle
 
 import paramiko
 import paramiko.agent
+import paramiko.config
 
 logging.basicConfig(format='%(message)s')
 log = logging.getLogger('remouse')
 
 default_key = os.path.expanduser('~/.ssh/remarkable')
+config_path = os.path.expanduser('~/.ssh/config')
 
 
 def open_rm_inputs(*, address, key, password):
@@ -40,6 +42,13 @@ def open_rm_inputs(*, address, key, password):
 
     agent = paramiko.agent.Agent()
 
+    # lookup "remarkable" in ssh config
+    config_entry = None
+    if os.path.exists(config_path):
+        config = paramiko.config.SSHConfig.from_path(config_path)
+        config_entry = config.lookup('remarkable')
+
+    # open key at provided path
     def use_key(key):
         for key_type in [paramiko.RSAKey, paramiko.Ed25519Key, paramiko.ECDSAKey]:
             try:
@@ -56,14 +65,22 @@ def open_rm_inputs(*, address, key, password):
                 break
         return pkey
 
+    # use provided key
     if key is not None:
         password = None
         pkey = use_key(key)
+    # fallback to "remarkable" entry in ssh config
+    elif 'identityfile' in config_entry and len(config_entry['identityfile']) > 0:
+        password = None
+        pkey = use_key(config_entry['identityfile'][0])
+    # fallback to user-provided password
+    elif password is not None:
+        pkey = None
+    # fallback to default pubkey location
     elif os.path.exists(default_key):
         password = None
         pkey = use_key(default_key)
-    elif password is not None:
-        pkey = None
+    # finally prompt user for password
     elif not agent.get_keys():
         password = getpass(
             "Password for '{}': ".format(address)
