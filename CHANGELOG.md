@@ -1,5 +1,6 @@
 # 7.1.0 - 2022-09-25
 - fix stretching/fitting/filling/rotation in evdev mode
+- fix evdev tilt
 - try to read Host config from ~/.ssh/config
 - report tablet size correct in 'libinput list-devices'
 

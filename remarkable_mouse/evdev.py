@@ -61,8 +61,8 @@ def create_local_device():
         (libevdev.EV_ABS.ABS_Y,        0,     15725,  100), # cyttsp5_mt
         (libevdev.EV_ABS.ABS_PRESSURE, 0,     4095,   None),
         (libevdev.EV_ABS.ABS_DISTANCE, 0,     255,    None),
-        (libevdev.EV_ABS.ABS_TILT_X,   -9000, 9000,   None),
-        (libevdev.EV_ABS.ABS_TILT_Y,   -9000, 9000,   None)
+        (libevdev.EV_ABS.ABS_TILT_X,   -6400, 6400,   6400),
+        (libevdev.EV_ABS.ABS_TILT_Y,   -6400, 6400,   6400)
     )
 
     for code, minimum, maximum, resolution in inputs:

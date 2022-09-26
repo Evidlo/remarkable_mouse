@@ -21,10 +21,10 @@ To use the `--region` flag, you may need to install the `python3-tk` or `python3
 
 # Examples
 
-specify address, monitor, orientation, password
+specify monitor, orientation, password
 
 ``` bash
-remouse --address 192.168.1.1 --orientation right --mode fit --monitor 1 --password foobar
+remouse --orientation right --mode fit --monitor 1 --password foobar
 ```
 
 passwordless login
