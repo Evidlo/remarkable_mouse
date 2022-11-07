@@ -43,7 +43,7 @@ def open_rm_inputs(*, address, key, password):
     agent = paramiko.agent.Agent()
 
     # lookup "remarkable" in ssh config
-    config_entry = None
+    config_entry = {}
     if os.path.exists(config_path):
         config = paramiko.config.SSHConfig.from_path(config_path)
         config_entry = config.lookup('remarkable')
