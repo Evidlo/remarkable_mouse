@@ -15,7 +15,7 @@ log = logging.getLogger('remouse')
 # finger_width = 767
 # finger_height = 1023
 
-def read_tablet(rm_inputs, *, orientation, monitor_num, region, threshold, mode,halt_hotkey):
+def read_tablet(rm_inputs, *, orientation, monitor_num, region, threshold, mode, halt_hotkey):
     """Loop forever and map evdev events to mouse
 
     Args:
@@ -39,29 +39,29 @@ def read_tablet(rm_inputs, *, orientation, monitor_num, region, threshold, mode,
 
     stream = rm_inputs['pen']
     while True:
-        if(not keyboard.is_pressed(halt_hotkey)):
-            try:
-                data = stream.read(16)
-            except TimeoutError:
-                continue
+        try:
+            data = stream.read(16)
+        except TimeoutError:
+            continue
 
-            e_time, e_millis, e_type, e_code, e_value = struct.unpack('2IHHi', data)
+        e_time, e_millis, e_type, e_code, e_value = struct.unpack('2IHHi', data)
 
-            # handle x direction
-            if codes[e_type][e_code] == 'ABS_X':
-                x = e_value
+        # handle x direction
+        if codes[e_type][e_code] == 'ABS_X':
+            x = e_value
 
-            # handle y direction
-            if codes[e_type][e_code] == 'ABS_Y':
-                y = e_value
+        # handle y direction
+        if codes[e_type][e_code] == 'ABS_Y':
+            y = e_value
 
-            # handle draw
-            if codes[e_type][e_code] == 'BTN_TOUCH':
-                if e_value == 1:
-                    mouse.press(Button.left)
-                else:
-                    mouse.release(Button.left)
+        # handle draw
+        if codes[e_type][e_code] == 'BTN_TOUCH':
+            if e_value == 1:
+                mouse.press(Button.left)
+            else:
+                mouse.release(Button.left)
 
+        if(not halt_hotkey or not keyboard.is_pressed(halt_hotkey)):
             if codes[e_type][e_code] == 'SYN_REPORT':
                 mapped_x, mapped_y = remap(
                     x, y,
@@ -76,3 +76,5 @@ def read_tablet(rm_inputs, *, orientation, monitor_num, region, threshold, mode,
 
             if log.level == logging.DEBUG:
                 log_event(e_time, e_millis, e_type, e_code, e_value)
+        else:
+            log.debug(f"listening of event stopped by hotkey")

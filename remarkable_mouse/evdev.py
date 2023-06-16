@@ -102,45 +102,45 @@ def read_tablet(rm_inputs, *, orientation, monitor_num, region, threshold, mode,
     # for input_name, stream in cycle(rm_inputs.items()):
     stream = rm_inputs['pen']
     while True:
-        if(not keyboard.is_pressed(halt_hotkey)):
-            try:
-                data = stream.read(16)
-            except TimeoutError:
-                continue
+        try:
+            data = stream.read(16)
+        except TimeoutError:
+            continue
 
-            e_time, e_millis, e_type, e_code, e_value = struct.unpack('2IHHi', data)
+        e_time, e_millis, e_type, e_code, e_value = struct.unpack('2IHHi', data)
 
-            # intercept EV_ABS events and modify coordinates
-            if types[e_type] == 'EV_ABS':
-                # handle x direction
-                if codes[e_type][e_code] == 'ABS_X':
-                    x = e_value
+        # intercept EV_ABS events and modify coordinates
+        if types[e_type] == 'EV_ABS':
+            # handle x direction
+            if codes[e_type][e_code] == 'ABS_X':
+                x = e_value
 
-                # handle y direction
-                if codes[e_type][e_code] == 'ABS_Y':
-                    y = e_value
+            # handle y direction
+            if codes[e_type][e_code] == 'ABS_Y':
+                y = e_value
 
-                # map to screen coordinates so that region/monitor/orientation options are applied
-                mapped_x, mapped_y = remap(
-                    x, y,
-                    wacom_max_x, wacom_max_y,
-                    monitor.width, monitor.height,
-                    mode, orientation
-                )
+            # map to screen coordinates so that region/monitor/orientation options are applied
+            mapped_x, mapped_y = remap(
+                x, y,
+                wacom_max_x, wacom_max_y,
+                monitor.width, monitor.height,
+                mode, orientation
+            )
 
-                mapped_x += monitor.x
-                mapped_y += monitor.y
+            mapped_x += monitor.x
+            mapped_y += monitor.y
 
-                # map back to wacom coordinates to reinsert into event
-                mapped_x = mapped_x * wacom_max_x / tot_width
-                mapped_y = mapped_y * wacom_max_y / tot_height
+            # map back to wacom coordinates to reinsert into event
+            mapped_x = mapped_x * wacom_max_x / tot_width
+            mapped_y = mapped_y * wacom_max_y / tot_height
 
-                # reinsert modified values into evdev event
-                if codes[e_type][e_code] == 'ABS_X':
-                    e_value = int(mapped_x)
-                if codes[e_type][e_code] == 'ABS_Y':
-                    e_value = int(mapped_y)
+            # reinsert modified values into evdev event
+            if codes[e_type][e_code] == 'ABS_X':
+                e_value = int(mapped_x)
+            if codes[e_type][e_code] == 'ABS_Y':
+                e_value = int(mapped_y)
 
+        if(not halt_hotkey or not keyboard.is_pressed(halt_hotkey)):
             # pass events directly to libevdev
             e_bit = libevdev.evbit(e_type, e_code)
             e = libevdev.InputEvent(e_bit, value=e_value)
@@ -148,3 +148,5 @@ def read_tablet(rm_inputs, *, orientation, monitor_num, region, threshold, mode,
 
             if log.level == logging.DEBUG:
                 log_event(e_time, e_millis, e_type, e_code, e_value)
+        else:
+            log.debug(f"listening of event stopped by hotkey")
