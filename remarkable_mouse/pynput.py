@@ -39,41 +39,40 @@ def read_tablet(rm_inputs, *, orientation, monitor_num, region, threshold, mode,
 
     stream = rm_inputs['pen']
     while True:
-        if(keyboard.is_pressed(halt_hotkey)):
-     	   continue
-        try:
-            data = stream.read(16)
-        except TimeoutError:
-            continue
+        if(not keyboard.is_pressed(halt_hotkey)):
+            try:
+                data = stream.read(16)
+            except TimeoutError:
+                continue
 
-        e_time, e_millis, e_type, e_code, e_value = struct.unpack('2IHHi', data)
+            e_time, e_millis, e_type, e_code, e_value = struct.unpack('2IHHi', data)
 
-        # handle x direction
-        if codes[e_type][e_code] == 'ABS_X':
-            x = e_value
+            # handle x direction
+            if codes[e_type][e_code] == 'ABS_X':
+                x = e_value
 
-        # handle y direction
-        if codes[e_type][e_code] == 'ABS_Y':
-            y = e_value
+            # handle y direction
+            if codes[e_type][e_code] == 'ABS_Y':
+                y = e_value
 
-        # handle draw
-        if codes[e_type][e_code] == 'BTN_TOUCH':
-            if e_value == 1:
-                mouse.press(Button.left)
-            else:
-                mouse.release(Button.left)
+            # handle draw
+            if codes[e_type][e_code] == 'BTN_TOUCH':
+                if e_value == 1:
+                    mouse.press(Button.left)
+                else:
+                    mouse.release(Button.left)
 
-        if codes[e_type][e_code] == 'SYN_REPORT':
-            mapped_x, mapped_y = remap(
-                x, y,
-                wacom_max_x, wacom_max_y,
-                monitor.width, monitor.height,
-                mode, orientation,
-            )
-            mouse.move(
-                monitor.x + mapped_x - mouse.position[0],
-                monitor.y + mapped_y - mouse.position[1]
-            )
+            if codes[e_type][e_code] == 'SYN_REPORT':
+                mapped_x, mapped_y = remap(
+                    x, y,
+                    wacom_max_x, wacom_max_y,
+                    monitor.width, monitor.height,
+                    mode, orientation,
+                )
+                mouse.move(
+                    monitor.x + mapped_x - mouse.position[0],
+                    monitor.y + mapped_y - mouse.position[1]
+                )
 
-        if log.level == logging.DEBUG:
-            log_event(e_time, e_millis, e_type, e_code, e_value)
+            if log.level == logging.DEBUG:
+                log_event(e_time, e_millis, e_type, e_code, e_value)
