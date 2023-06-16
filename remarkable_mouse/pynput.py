@@ -14,7 +14,7 @@ log = logging.getLogger('remouse')
 # finger_width = 767
 # finger_height = 1023
 
-def read_tablet(rm_inputs, *, orientation, monitor_num, region, threshold, mode):
+def read_tablet(rm_inputs, *, orientation, monitor_num, region, threshold, mode,halt_hotkey):
     """Loop forever and map evdev events to mouse
 
     Args:
@@ -37,7 +37,7 @@ def read_tablet(rm_inputs, *, orientation, monitor_num, region, threshold, mode)
     x = y = 0
 
     stream = rm_inputs['pen']
-    while True:
+    while(not keyboard.is_pressed(halt_hotkey)):
         try:
             data = stream.read(16)
         except TimeoutError:

@@ -76,7 +76,7 @@ def create_local_device():
     return device.create_uinput_device()
 
 
-def read_tablet(rm_inputs, *, orientation, monitor_num, region, threshold, mode):
+def read_tablet(rm_inputs, *, orientation, monitor_num, region, threshold, mode,halt_hotkey):
     """Pipe rM evdev events to local device
 
     Args:
@@ -100,7 +100,7 @@ def read_tablet(rm_inputs, *, orientation, monitor_num, region, threshold, mode)
     # loop inputs forever
     # for input_name, stream in cycle(rm_inputs.items()):
     stream = rm_inputs['pen']
-    while True:
+    while(not keyboard.is_pressed(halt_hotkey)):
         try:
             data = stream.read(16)
         except TimeoutError:

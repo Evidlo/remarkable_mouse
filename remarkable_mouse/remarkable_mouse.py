@@ -141,6 +141,7 @@ def main():
         parser.add_argument('--region', action='store_true', default=False, help="Use a GUI to position the output area. Overrides --monitor")
         parser.add_argument('--threshold', metavar='THRESH', default=600, type=int, help="stylus pressure threshold (default 600)")
         parser.add_argument('--evdev', action='store_true', default=False, help="use evdev to support pen pressure (requires root, Linux only)")
+        parser.add_argument('--hotkey', default='F2', type=str, help="define shortcut to halt the listening of clicks. \nFor combinations, use format 'shift+s, space'\ndefault: 'F2'")
 
         args = parser.parse_args()
 
@@ -174,6 +175,7 @@ def main():
             region=args.region,
             threshold=args.threshold,
             mode=args.mode,
+            halt_hotkey=halt_hotkey
         )
 
     except PermissionError:

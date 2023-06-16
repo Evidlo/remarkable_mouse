@@ -23,7 +23,8 @@ setup(
         'paramiko',
         'libevdev',
         'pynput',
-        'screeninfo'
+        'screeninfo',
+        'keyboard'
     ],
     classifiers=[
         "Programming Language :: Python :: 3",
