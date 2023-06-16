@@ -38,7 +38,9 @@ def read_tablet(rm_inputs, *, orientation, monitor_num, region, threshold, mode,
     x = y = 0
 
     stream = rm_inputs['pen']
-    while(not keyboard.is_pressed(halt_hotkey)):
+    while True:
+        if(keyboard.is_pressed(halt_hotkey)):
+     	   continue
         try:
             data = stream.read(16)
         except TimeoutError:
