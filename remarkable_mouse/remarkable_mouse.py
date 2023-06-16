@@ -175,7 +175,7 @@ def main():
             region=args.region,
             threshold=args.threshold,
             mode=args.mode,
-            halt_hotkey=halt_hotkey
+            halt_hotkey=args.hotkey
         )
 
     except PermissionError:
