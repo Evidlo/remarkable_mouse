@@ -6,6 +6,7 @@ import time
 from itertools import cycle
 from socket import timeout as TimeoutError
 import libevdev
+import keyboard
 
 from .codes import codes, types
 from .common import get_monitor, remap, wacom_max_x, wacom_max_y, log_event
@@ -76,7 +77,7 @@ def create_local_device():
     return device.create_uinput_device()
 
 
-def read_tablet(rm_inputs, *, orientation, monitor_num, region, threshold, mode):
+def read_tablet(rm_inputs, *, orientation, monitor_num, region, threshold, mode,halt_hotkey):
     """Pipe rM evdev events to local device
 
     Args:
@@ -139,10 +140,13 @@ def read_tablet(rm_inputs, *, orientation, monitor_num, region, threshold, mode)
             if codes[e_type][e_code] == 'ABS_Y':
                 e_value = int(mapped_y)
 
-        # pass events directly to libevdev
-        e_bit = libevdev.evbit(e_type, e_code)
-        e = libevdev.InputEvent(e_bit, value=e_value)
-        local_device.send_events([e])
+        if(not halt_hotkey or not keyboard.is_pressed(halt_hotkey)):
+            # pass events directly to libevdev
+            e_bit = libevdev.evbit(e_type, e_code)
+            e = libevdev.InputEvent(e_bit, value=e_value)
+            local_device.send_events([e])
 
-        if log.level == logging.DEBUG:
-            log_event(e_time, e_millis, e_type, e_code, e_value)
+            if log.level == logging.DEBUG:
+                log_event(e_time, e_millis, e_type, e_code, e_value)
+        else:
+            log.debug(f"listening of event stopped by hotkey")

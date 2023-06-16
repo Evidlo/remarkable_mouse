@@ -1,5 +1,6 @@
 import logging
 import struct
+import keyboard
 from screeninfo import get_monitors
 
 # from .codes import EV_SYN, EV_ABS, ABS_X, ABS_Y, BTN_TOUCH
@@ -14,7 +15,7 @@ log = logging.getLogger('remouse')
 # finger_width = 767
 # finger_height = 1023
 
-def read_tablet(rm_inputs, *, orientation, monitor_num, region, threshold, mode):
+def read_tablet(rm_inputs, *, orientation, monitor_num, region, threshold, mode, halt_hotkey):
     """Loop forever and map evdev events to mouse
 
     Args:
@@ -60,17 +61,20 @@ def read_tablet(rm_inputs, *, orientation, monitor_num, region, threshold, mode)
             else:
                 mouse.release(Button.left)
 
-        if codes[e_type][e_code] == 'SYN_REPORT':
-            mapped_x, mapped_y = remap(
-                x, y,
-                wacom_max_x, wacom_max_y,
-                monitor.width, monitor.height,
-                mode, orientation,
-            )
-            mouse.move(
-                monitor.x + mapped_x - mouse.position[0],
-                monitor.y + mapped_y - mouse.position[1]
-            )
+        if(not halt_hotkey or not keyboard.is_pressed(halt_hotkey)):
+            if codes[e_type][e_code] == 'SYN_REPORT':
+                mapped_x, mapped_y = remap(
+                    x, y,
+                    wacom_max_x, wacom_max_y,
+                    monitor.width, monitor.height,
+                    mode, orientation,
+                )
+                mouse.move(
+                    monitor.x + mapped_x - mouse.position[0],
+                    monitor.y + mapped_y - mouse.position[1]
+                )
 
-        if log.level == logging.DEBUG:
-            log_event(e_time, e_millis, e_type, e_code, e_value)
+            if log.level == logging.DEBUG:
+                log_event(e_time, e_millis, e_type, e_code, e_value)
+        else:
+            log.debug(f"listening of event stopped by hotkey")
