@@ -28,7 +28,7 @@ def get_monitor(region, monitor_num, orientation):
 
     # compute size of box encompassing all screens
     max_x, max_y = 0, 0
-    if(sys.platform == 'darwin')
+    if(sys.platform == 'darwin'):
     	log.debug(f"Handling MacOS monitors")
     	monitors = get_monitors(Enumerator.OSX)
     else:
