@@ -1,5 +1,6 @@
 import logging
 import struct
+import keyboard
 from screeninfo import get_monitors
 
 # from .codes import EV_SYN, EV_ABS, ABS_X, ABS_Y, BTN_TOUCH
