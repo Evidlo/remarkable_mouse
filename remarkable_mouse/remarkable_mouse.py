@@ -141,6 +141,7 @@ def main():
         parser.add_argument('--region', action='store_true', default=False, help="Use a GUI to position the output area. Overrides --monitor")
         parser.add_argument('--threshold', metavar='THRESH', default=600, type=int, help="stylus pressure threshold (default 600)")
         parser.add_argument('--evdev', action='store_true', default=False, help="use evdev to support pen pressure (requires root, Linux only)")
+        parser.add_argument('--pen', action='store_true', default=False, help="use pen input to support pen pressure in windows")
 
         args = parser.parse_args()
 
@@ -163,6 +164,9 @@ def main():
 
         if args.evdev:
             from remarkable_mouse.evdev import read_tablet
+
+        elif args.pen:
+            from remarkable_mouse.pen import read_tablet
 
         else:
             from remarkable_mouse.pynput import read_tablet
