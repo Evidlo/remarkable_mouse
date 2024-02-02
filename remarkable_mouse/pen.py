@@ -1,6 +1,7 @@
 import logging
 import struct
 import ctypes
+import time
 from screeninfo import get_monitors
 
 from .codes import codes, types
@@ -108,7 +109,7 @@ currently_down = False
 def updatePenInfo(down, x=0, y=0, pressure=0, tiltX=0, tiltY=0):
     global currently_down
     if down == True:
-        pointerTypeInfo.penInfo.pointerInfo.pointerFlags = (POINTER_FLAG_DOWN if not currently_down==True else POINTER_FLAG_UPDATE | POINTER_FLAG_INCONTACT)
+        pointerTypeInfo.penInfo.pointerInfo.pointerFlags = (POINTER_FLAG_DOWN if not currently_down==True else POINTER_FLAG_UPDATE | POINTER_FLAG_INRANGE | POINTER_FLAG_INCONTACT)
         currently_down = True
     else:
         pointerTypeInfo.penInfo.pointerInfo.pointerFlags = (POINTER_FLAG_UP if currently_down==True else POINTER_FLAG_UPDATE | POINTER_FLAG_INRANGE)
@@ -172,24 +173,23 @@ def read_tablet(rm_inputs, *, orientation, monitor_num, region, threshold, mode)
         if codes[e_type][e_code] == 'ABS_TILT_X':
             tiltX = int(e_value*(90/6300))
             
-        # handle pressure
         if codes[e_type][e_code] == 'ABS_TILT_Y':
             tiltY = int(e_value*(90/6300))
 
         if codes[e_type][e_code] == 'SYN_REPORT':
+            
             mapped_x, mapped_y = remap(
                 x, y,
                 wacom_max_x, wacom_max_y,
                 monitor.width, monitor.height,
                 mode, orientation,
             )
+            # handle draw
+            if press > 0:
+                updatePenInfo(True, max(int(monitor.x+mapped_x),0), max(int(monitor.y+mapped_y),0), mapped_press, tiltX, tiltY)
+            else:
+                updatePenInfo(False, max(int(monitor.x+mapped_x),0), max(int(monitor.y+mapped_y),0), mapped_press, tiltX, tiltY)
+            applyPen()
             
-        # handle draw
-        if press > 0:
-            updatePenInfo(True, int(mapped_x), int(mapped_y), mapped_press, tiltX, tiltY)
-        else:
-            updatePenInfo(False, int(mapped_x), int(mapped_y), mapped_press, tiltX, tiltY)
-        applyPen()
-
         # if log.level == logging.DEBUG:
             # log_event(e_time, e_millis, e_type, e_code, e_value)
