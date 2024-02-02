@@ -1,3 +1,9 @@
+# remarkable_mouse with pressure and tilt for Windows
+
+While using the excellent remarkable mouse from Evidlo I needed to have pressure sensitivity for Windows. I don't really know how to code but following the logic an through online searches came to a solution. It is probably not pretty, but it works and it also enables tilt in Windows by creating a virtual pen injection. Use the --pen flag to load this mode. Would be great of someone would take this, implement it correctly and create a tray tool out of it with some options (switch windows during usage for instance).
+
+You can download a zip of this repo and install with 'pip install path-to-zip'.
+
 # remarkable_mouse
 
 Use your reMarkable as a graphics tablet.
