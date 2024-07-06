@@ -53,13 +53,18 @@ def open_rm_inputs(*, address, key, password):
         for key_type in [paramiko.RSAKey, paramiko.Ed25519Key, paramiko.ECDSAKey]:
             try:
                 pkey = key_type.from_private_key_file(os.path.expanduser(key))
+                break
             except paramiko.ssh_exception.PasswordRequiredException:
                 passphrase = getpass(
                     "Enter passphrase for key '{}': ".format(os.path.expanduser(key))
                 )
-                pkey = paramiko.RSAKey.from_private_key_file(
-                    os.path.expanduser(key), password=passphrase
-                )
+                # try to read the file again, this time with the password
+                for key_type in [paramiko.RSAKey, paramiko.Ed25519Key, paramiko.ECDSAKey]:
+                    try:
+                        pkey = key_type.from_private_key_file(os.path.expanduser(key), password=passphrase)
+                        break
+                    except paramiko.ssh_exception.SSHException:
+                        continue
                 break
             except paramiko.ssh_exception.SSHException:
                 continue
