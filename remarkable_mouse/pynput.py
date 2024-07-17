@@ -14,7 +14,7 @@ log = logging.getLogger('remouse')
 # finger_width = 767
 # finger_height = 1023
 
-def read_tablet(rm_inputs, *, orientation, monitor_num, region, threshold, mode, auto_monitor):
+def read_tablet(rm_inputs, *, orientation, monitor_num, region, threshold, mode, auto_monitor, relative):
     """Loop forever and map evdev events to mouse
 
     Args:
@@ -76,10 +76,16 @@ def read_tablet(rm_inputs, *, orientation, monitor_num, region, threshold, mode,
                 monitor.width, monitor.height,
                 mode, orientation,
             )
-            mouse.move(
-                monitor.x + mapped_x - mouse.position[0],
-                monitor.y + mapped_y - mouse.position[1]
-            )
+            if relative:
+                mouse.move(
+                    monitor.x + mapped_x,
+                    monitor.y + mapped_y
+                )
+            else:
+                mouse.move(
+                    monitor.x + mapped_x - mouse.position[0],
+                    monitor.y + mapped_y - mouse.position[1]
+                )
 
         if log.level == logging.DEBUG:
             log_event(e_time, e_millis, e_type, e_code, e_value)

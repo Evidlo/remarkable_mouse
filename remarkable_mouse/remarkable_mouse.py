@@ -8,10 +8,15 @@ import sys
 import struct
 from getpass import getpass
 from itertools import cycle
+from platform import system
 
 import paramiko
 import paramiko.agent
 import paramiko.config
+
+LINUX = "Linux"
+WINDOWS = "Windows"
+
 
 logging.basicConfig(format='%(message)s')
 log = logging.getLogger('remouse')
@@ -138,13 +143,16 @@ def main():
         Stretch: take up both the entire tablet and monitor, but don't maintain aspect ratio.""")
         parser.add_argument('--orientation', default='right', choices=['top', 'left', 'right', 'bottom'], help="position of tablet buttons")
         parser.add_argument('--monitor', default=0, type=int, metavar='NUM', help="monitor to output to")
-        parser.add_argument('--region', action='store_true', default=False, help="Use a GUI to position the output area. Overrides --monitor")
+        parser.add_argument('--region', action='store_true', default=False, help="Use a GUI to position the output area. Overrides --monitor and --auto-monitor")
         parser.add_argument('--threshold', metavar='THRESH', default=600, type=int, help="stylus pressure threshold (default 600)")
-        parser.add_argument('--evdev', action='store_true', default=False, help="use evdev to support pen pressure (requires root, Linux only)")
-        parser.add_argument('--pen', action='store_true', default=False, help="use pen input to support pen pressure in windows")
-        parser.add_argument('--auto-monitor', action='store_true', default=False, help="actively switch monitor to the one that the mouse is currently on. Overrides --monitor and --region")
+        parser.add_argument('--mouse', action='store_true', default=False, help="emulate mouse instead of pen (no pressure/tilt sensitivity). Default on macOS")
+        parser.add_argument('--auto-monitor', action='store_true', default=False, help="actively switch monitor to the one that the mouse is currently on. Overrides --monitor")
+        parser.add_argument('--relative', action='store_true', default=False, help="Use trackpad-like relative tracking instead of absolute tracking")
 
         args = parser.parse_args()
+
+        if args.region:
+            args["auto-monitor"] = False
 
         if args.debug:
             log.setLevel(logging.DEBUG)
@@ -161,18 +169,22 @@ def main():
         )
         print("Connected to", args.address)
 
+        
+        
         # ----- Handle events -----
 
-        if args.evdev:
+        system = system()
+
+        if args.mouse:
+            from remarkable_mouse.pynput import read_tablet
+        elif system == LINUX:
             from remarkable_mouse.evdev import read_tablet
-
-        elif args.pen:
+        elif system == WINDOWS:
             from remarkable_mouse.pen import read_tablet
-
         else:
             from remarkable_mouse.pynput import read_tablet
 
-        
+
 
         read_tablet(
             rm_inputs,
@@ -182,7 +194,7 @@ def main():
             threshold=args.threshold,
             mode=args.mode,
             auto_monitor=args["auto-monitor"],
-
+            relative=args.relative,
         )
 
     except PermissionError:
