@@ -39,7 +39,7 @@ def read_tablet(rm_inputs, *, orientation, monitor_num, region, threshold, mode,
 
     x = y = 0
 
-    in_range = False
+    in_range = True
     start_x = 0
     start_y = 0
 
@@ -87,8 +87,8 @@ def read_tablet(rm_inputs, *, orientation, monitor_num, region, threshold, mode,
                     start_y = mapped_y
                     in_range = True
                 mouse.move(
-                    monitor.x + mapped_x - start_x - mouse.position[0],
-                    monitor.y + mapped_y - start_y - mouse.position[1]
+                    monitor.x + mapped_x - start_x,
+                    monitor.y + mapped_y - start_y
                 )
             else:
                 mouse.move(
