@@ -15,11 +15,11 @@ log.debug('Using pen injection')
 
 # Constants
 
+# Max values for linux / windows 
 MAX_ABS_PRESSURE=4095
 MAX_WIN_PRESSURE=1024
 MAX_ANGLE=90
 MAX_ABS_TILT=6300
-
 
 # For penMask
 PEN_MASK_NONE=            0x00000000 # Default
@@ -119,7 +119,7 @@ def applyPen(x=0, y=0, pressure=0, tiltX=0, tiltY=0):
         pointerTypeInfo.penInfo.pointerInfo.pointerFlags = (POINTER_FLAG_DOWN if not currently_down else POINTER_FLAG_UPDATE | POINTER_FLAG_INRANGE | POINTER_FLAG_INCONTACT)
         currently_down = True
     else:
-        pointerTypeInfo.penInfo.pointerInfo.pointerFlags = (POINTER_FLAG_UP if currently_down else POINTER_FLAG_UPDATE | POINTER_FLAG_INRANGE)
+        pointerTypeInfo.penInfo.pointerInfo.pointerFlags = (POINTER_FLAG_UP if currently_down==True else POINTER_FLAG_UPDATE | POINTER_FLAG_INRANGE)
         currently_down = False
 
     pointerTypeInfo.penInfo.pointerInfo.ptPixelLocation.x = x
