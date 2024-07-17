@@ -97,6 +97,7 @@ def read_tablet(rm_inputs, *, orientation, monitor_num, region, threshold, mode,
 
     x = y = 0
 
+    
     # loop inputs forever
     # for input_name, stream in cycle(rm_inputs.items()):
     stream = rm_inputs['pen']

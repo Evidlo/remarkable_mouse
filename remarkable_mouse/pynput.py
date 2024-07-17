@@ -39,6 +39,10 @@ def read_tablet(rm_inputs, *, orientation, monitor_num, region, threshold, mode,
 
     x = y = 0
 
+    in_range = False
+    start_x = 0
+    start_y = 0
+
     stream = rm_inputs['pen']
     while True:
         if auto_monitor:
@@ -50,6 +54,7 @@ def read_tablet(rm_inputs, *, orientation, monitor_num, region, threshold, mode,
         try:
             data = stream.read(16)
         except TimeoutError:
+            in_range = False
             continue
 
         e_time, e_millis, e_type, e_code, e_value = struct.unpack('2IHHi', data)
@@ -77,15 +82,19 @@ def read_tablet(rm_inputs, *, orientation, monitor_num, region, threshold, mode,
                 mode, orientation,
             )
             if relative:
+                if not in_range:
+                    start_x = mapped_x
+                    start_y = mapped_y
                 mouse.move(
-                    monitor.x + mapped_x,
-                    monitor.y + mapped_y
+                    monitor.x + mapped_x - start_x - mouse.position[0],
+                    monitor.y + mapped_y - start_y - mouse.position[1]
                 )
             else:
                 mouse.move(
                     monitor.x + mapped_x - mouse.position[0],
                     monitor.y + mapped_y - mouse.position[1]
                 )
+            in_range = True
 
         if log.level == logging.DEBUG:
             log_event(e_time, e_millis, e_type, e_code, e_value)

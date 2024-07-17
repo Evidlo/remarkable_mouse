@@ -24,8 +24,8 @@ def get_current_monitor_num():
     mouse_y = mouse.position[1]
 
     for i, monitor in enumerate(get_monitors()):
-        if mouse_x >= monitor.x and mouse_x < monitor.x + monitor.width and mouse_y >= monitor.y and mouse_y < monitor.y + monitor.height:
-            print(i)
+        if (mouse_x >= monitor.x and mouse_x < monitor.x + monitor.width and 
+                mouse_y >= monitor.y and mouse_y < monitor.y + monitor.height): 
             return i
     return 0
 
