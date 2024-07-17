@@ -5,7 +5,7 @@ import time
 from screeninfo import get_monitors
 
 from .codes import codes, types
-from .common import get_monitor, remap, wacom_max_x, wacom_max_y, log_event
+from .common import get_monitor, remap, wacom_max_x, wacom_max_y, log_event, get_current_monitor_num
 from ctypes import *
 from ctypes.wintypes import *
 
@@ -136,7 +136,7 @@ def applyPen(x=0, y=0, pressure=0, tiltX=0, tiltY=0):
 
 
         
-def read_tablet(rm_inputs, *, orientation, monitor_num, region, threshold, mode):
+def read_tablet(rm_inputs, *, orientation, monitor_num, region, threshold, mode, auto_monitor):
     """Loop forever and map evdev events to mouse
 
     Args:
@@ -149,6 +149,7 @@ def read_tablet(rm_inputs, *, orientation, monitor_num, region, threshold, mode)
         mode (str): mapping mode
     """
 
+
     monitor, _ = get_monitor(region, monitor_num, orientation)
     log.debug('Chose monitor: {}'.format(monitor))
 
@@ -157,6 +158,12 @@ def read_tablet(rm_inputs, *, orientation, monitor_num, region, threshold, mode)
     stream = rm_inputs['pen']
 
     while True:
+        if auto_monitor:
+            new_monitor = get_current_monitor_num()
+        if new_monitor != monitor_num:
+            monitor_num = new_monitor
+            monitor, _ = get_monitor(region, monitor_num, orientation)
+
         try:
             data = stream.read(16)
         except TimeoutError:

@@ -4,7 +4,7 @@ from screeninfo import get_monitors
 
 # from .codes import EV_SYN, EV_ABS, ABS_X, ABS_Y, BTN_TOUCH
 from .codes import codes
-from .common import get_monitor, remap, wacom_max_x, wacom_max_y, log_event
+from .common import get_monitor, remap, wacom_max_x, wacom_max_y, log_event, get_current_monitor_num
 
 logging.basicConfig(format='%(message)s')
 log = logging.getLogger('remouse')
@@ -14,7 +14,7 @@ log = logging.getLogger('remouse')
 # finger_width = 767
 # finger_height = 1023
 
-def read_tablet(rm_inputs, *, orientation, monitor_num, region, threshold, mode):
+def read_tablet(rm_inputs, *, orientation, monitor_num, region, threshold, mode, auto_monitor):
     """Loop forever and map evdev events to mouse
 
     Args:
@@ -25,11 +25,14 @@ def read_tablet(rm_inputs, *, orientation, monitor_num, region, threshold, mode)
         region (boolean): whether to selection mapping region with region tool
         threshold (int): pressure threshold
         mode (str): mapping mode
+        auto_monitor (str)
     """
 
     from pynput.mouse import Button, Controller
 
     mouse = Controller()
+
+
 
     monitor, _ = get_monitor(region, monitor_num, orientation)
     log.debug('Chose monitor: {}'.format(monitor))
@@ -38,6 +41,12 @@ def read_tablet(rm_inputs, *, orientation, monitor_num, region, threshold, mode)
 
     stream = rm_inputs['pen']
     while True:
+        if auto_monitor:
+            new_monitor = get_current_monitor_num()
+        if new_monitor != monitor_num:
+            monitor_num = new_monitor
+            monitor, _ = get_monitor(region, monitor_num, orientation)
+
         try:
             data = stream.read(16)
         except TimeoutError:
