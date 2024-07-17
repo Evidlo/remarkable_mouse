@@ -14,6 +14,13 @@ log = logging.getLogger('remouse')
 log.debug('Using pen injection')
 
 # Constants
+
+MAX_ABS_PRESSURE=4095
+MAX_WIN_PRESSURE=1024
+MAX_ANGLE=90
+MAX_ABS_TILT=6300
+
+
 # For penMask
 PEN_MASK_NONE=            0x00000000 # Default
 PEN_MASK_PRESSURE=        0x00000001
@@ -102,17 +109,17 @@ penInfo = POINTER_PEN_INFO(pointerInfo=pointerInfo,
 pointerTypeInfo = POINTER_TYPE_INFO(type=PT_PEN,
                             penInfo=penInfo)
 
-device = windll.user32.CreateSyntheticPointerDevice(3, 1, 1)
+device = windll.user32.CreateSyntheticPointerDevice(PT_PEN, 1, 1)
 print("Initialized Pen Injection as number ", device)
 currently_down = False
 
-def updatePenInfo(down, x=0, y=0, pressure=0, tiltX=0, tiltY=0):
+def applyPen(x=0, y=0, pressure=0, tiltX=0, tiltY=0):
     global currently_down
-    if down == True:
-        pointerTypeInfo.penInfo.pointerInfo.pointerFlags = (POINTER_FLAG_DOWN if not currently_down==True else POINTER_FLAG_UPDATE | POINTER_FLAG_INRANGE | POINTER_FLAG_INCONTACT)
+    if pressure > 0:
+        pointerTypeInfo.penInfo.pointerInfo.pointerFlags = (POINTER_FLAG_DOWN if not currently_down else POINTER_FLAG_UPDATE | POINTER_FLAG_INRANGE | POINTER_FLAG_INCONTACT)
         currently_down = True
     else:
-        pointerTypeInfo.penInfo.pointerInfo.pointerFlags = (POINTER_FLAG_UP if currently_down==True else POINTER_FLAG_UPDATE | POINTER_FLAG_INRANGE)
+        pointerTypeInfo.penInfo.pointerInfo.pointerFlags = (POINTER_FLAG_UP if currently_down else POINTER_FLAG_UPDATE | POINTER_FLAG_INRANGE)
         currently_down = False
 
     pointerTypeInfo.penInfo.pointerInfo.ptPixelLocation.x = x
@@ -120,13 +127,14 @@ def updatePenInfo(down, x=0, y=0, pressure=0, tiltX=0, tiltY=0):
     pointerTypeInfo.penInfo.pressure = pressure
     pointerTypeInfo.penInfo.tiltX = tiltX
     pointerTypeInfo.penInfo.tiltY = tiltY
-
-def applyPen():
+    
     result = windll.user32.InjectSyntheticPointerInput(device, byref(pointerTypeInfo), 1)
     if (result == False) and (log.level == logging.DEBUG):
         error_code = ctypes.get_last_error()
         print(f"Failed trying to update pen input. Error code: {error_code}")
         print(f"Error message: {ctypes.WinError(error_code).strerror}")
+
+
         
 def read_tablet(rm_inputs, *, orientation, monitor_num, region, threshold, mode):
     """Loop forever and map evdev events to mouse
@@ -167,14 +175,14 @@ def read_tablet(rm_inputs, *, orientation, monitor_num, region, threshold, mode)
         # handle pressure
         if codes[e_type][e_code] == 'ABS_PRESSURE':
             press = e_value
-            mapped_press = int(press* (1024/4095))
+            mapped_press = int(press* (MAX_WIN_PRESSURE / MAX_ABS_PRESSURE))
             
         # handle tilt
         if codes[e_type][e_code] == 'ABS_TILT_X':
-            tiltX = int(e_value*(90/6300))
+            tiltX = int(e_value*( MAX_ANGLE / MAX_ABS_TILT ))
             
         if codes[e_type][e_code] == 'ABS_TILT_Y':
-            tiltY = int(e_value*(90/6300))
+            tiltY = int(e_value*( MAX_ANGLE  /MAX_ABS_TILT ))
 
         if codes[e_type][e_code] == 'SYN_REPORT':
             
@@ -184,12 +192,9 @@ def read_tablet(rm_inputs, *, orientation, monitor_num, region, threshold, mode)
                 monitor.width, monitor.height,
                 mode, orientation,
             )
-            # handle draw
-            if press > 0:
-                updatePenInfo(True, max(int(monitor.x+mapped_x),0), max(int(monitor.y+mapped_y),0), mapped_press, tiltX, tiltY)
-            else:
-                updatePenInfo(False, max(int(monitor.x+mapped_x),0), max(int(monitor.y+mapped_y),0), mapped_press, tiltX, tiltY)
-            applyPen()
             
-        # if log.level == logging.DEBUG:
-            # log_event(e_time, e_millis, e_type, e_code, e_value)
+            # handle draw
+            applyPen(max(int(monitor.x+mapped_x),0), max(int(monitor.y+mapped_y),0), mapped_press, tiltX, tiltY)
+            
+        if log.level == logging.DEBUG:
+            log_event(e_time, e_millis, e_type, e_code, e_value)
