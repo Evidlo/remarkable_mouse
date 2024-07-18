@@ -1,7 +1,8 @@
 import logging
 import struct
 from screeninfo import get_monitors
-
+import time
+import math
 # from .codes import EV_SYN, EV_ABS, ABS_X, ABS_Y, BTN_TOUCH
 from .codes import codes
 from .common import get_monitor, remap, wacom_max_x, wacom_max_y, log_event, get_current_monitor_num
@@ -9,12 +10,17 @@ from .common import get_monitor, remap, wacom_max_x, wacom_max_y, log_event, get
 logging.basicConfig(format='%(message)s')
 log = logging.getLogger('remouse')
 
+
+
+
+
+
 # wacom digitizer dimensions
 # touchscreen dimensions
 # finger_width = 767
 # finger_height = 1023
 
-def read_tablet(rm_inputs, *, orientation, monitor_num, region, threshold, mode, auto_monitor, relative):
+def read_tablet(rm_inputs, *, orientation, monitor_num, region, threshold, mode, auto_monitor, relative, monitor_update):
     """Loop forever and map evdev events to mouse
 
     Args:
@@ -33,40 +39,54 @@ def read_tablet(rm_inputs, *, orientation, monitor_num, region, threshold, mode,
     mouse = Controller()
 
 
-
     monitor, _ = get_monitor(region, monitor_num, orientation)
+    
     log.debug('Chose monitor: {}'.format(monitor))
 
     x = y = 0
 
-    in_range = True
-    start_x = 0
-    start_y = 0
-
-    stream = rm_inputs['pen']
+    lastx_needsupdate=True
+    lasty_needsupdate=True
+    
+    stream = rm_inputs['pen'] 
     while True:
-        if auto_monitor:
-            new_monitor = get_current_monitor_num()
-            if new_monitor != monitor_num:
-                monitor_num = new_monitor
-                monitor, _ = get_monitor(region, monitor_num, orientation)
-
+        if auto_monitor and monitor_update[0] != monitor_num:
+            monitor_num=monitor_update[0]
+            monitor, _ = get_monitor(region, monitor_num, orientation)
+        
+        start = time.time()
         try:
             data = stream.read(16)
         except TimeoutError:
-            in_range = False
             continue
+        
+        # time spent waiting for stream.read(). Used to see if pen was lifted for relative tracking since stream.read() will wait until more data comes in
+        elapsed = time.time() - start
+        
+        if elapsed > 0.2:
+            print(elapsed)
+            lastx_needsupdate=True
+            lasty_needsupdate=True
 
         e_time, e_millis, e_type, e_code, e_value = struct.unpack('2IHHi', data)
 
         # handle x direction
         if codes[e_type][e_code] == 'ABS_X':
             x = e_value
-
+            if lastx_needsupdate:
+                last_x = x
+                lastx_needsupdate = False
+                continue
+            
         # handle y direction
         if codes[e_type][e_code] == 'ABS_Y':
             y = e_value
-
+            if lasty_needsupdate:
+                last_y = y
+                lasty_needsupdate = False
+                continue
+        
+       
         # handle draw
         if codes[e_type][e_code] == 'BTN_TOUCH':
             if e_value == 1:
@@ -82,20 +102,32 @@ def read_tablet(rm_inputs, *, orientation, monitor_num, region, threshold, mode,
                 mode, orientation,
             )
             if relative:
-                if not in_range:
-                    start_x = mapped_x
-                    start_y = mapped_y
-                    in_range = True
+                mapped_last_x, mapped_last_y = remap(
+                last_x, last_y,
+                wacom_max_x, wacom_max_y,
+                monitor.width, monitor.height,
+                mode, orientation,
+            )
+                
+                
+                # print("startx", start_x)
+                # print("Mappedx", mapped_x)
+                # print("dx", monitor.x + mapped_x - start_x)
+                
+                print(mapped_x)
+                
                 mouse.move(
-                    monitor.x + mapped_x - start_x,
-                    monitor.y + mapped_y - start_y
+                    monitor.x + mapped_x - mapped_last_x,
+                    monitor.y + mapped_y - mapped_last_y
                 )
+                
             else:
                 mouse.move(
                     monitor.x + mapped_x - mouse.position[0],
                     monitor.y + mapped_y - mouse.position[1]
                 )
-            in_range = True
+            last_x = x
+            last_y = y
 
         if log.level == logging.DEBUG:
             log_event(e_time, e_millis, e_type, e_code, e_value)

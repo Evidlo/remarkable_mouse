@@ -8,11 +8,13 @@ import sys
 import struct
 from getpass import getpass
 from itertools import cycle
-from platform import system
-
+import platform 
+import threading
+from .common import get_current_monitor_num
 import paramiko
 import paramiko.agent
 import paramiko.config
+import time
 
 LINUX = "Linux"
 WINDOWS = "Windows"
@@ -130,6 +132,7 @@ def open_rm_inputs(*, address, key, password):
     return {'pen': pen, 'touch': touch, 'button': button}
 
 
+
 def main():
     try:
         parser = argparse.ArgumentParser(description="use reMarkable tablet as a mouse input")
@@ -146,7 +149,7 @@ def main():
         parser.add_argument('--region', action='store_true', default=False, help="Use a GUI to position the output area. Overrides --monitor and --auto-monitor")
         parser.add_argument('--threshold', metavar='THRESH', default=600, type=int, help="stylus pressure threshold (default 600)")
         parser.add_argument('--mouse', action='store_true', default=False, help="emulate mouse instead of pen (no pressure/tilt sensitivity). Default on macOS")
-        parser.add_argument('--auto-monitor', action='store_true', default=False, help="actively switch monitor to the one that the mouse is currently on. Overrides --monitor")
+        parser.add_argument('--automonitor', action='store_true', default=False, help="actively switch monitor to the one that the mouse is currently on. Overrides --monitor")
         parser.add_argument('--relative', action='store_true', default=False, help="Use trackpad-like relative tracking instead of absolute tracking")
 
         args = parser.parse_args()
@@ -173,7 +176,7 @@ def main():
         
         # ----- Handle events -----
 
-        system = system()
+        system = platform.system()
 
         if args.mouse:
             from remarkable_mouse.pynput import read_tablet
@@ -185,17 +188,31 @@ def main():
             from remarkable_mouse.pynput import read_tablet
 
 
+        check=threading.Condition()
 
-        read_tablet(
-            rm_inputs,
-            orientation=args.orientation,
-            monitor_num=args.monitor,
-            region=args.region,
-            threshold=args.threshold,
-            mode=args.mode,
-            auto_monitor=args["auto-monitor"],
-            relative=args.relative,
-        )
+        monitor_num_obj = [args.monitor]
+        
+        th = threading.Thread(target=read_tablet, kwargs={
+                'rm_inputs':rm_inputs, 
+                'orientation':args.orientation, 
+                'monitor_num': args.monitor, 
+                'region':args.region, 
+                'threshold':args.threshold, 
+                'mode':args.mode, 
+                'auto_monitor':args.automonitor, 
+                'relative':args.relative,
+                'monitor_update': monitor_num_obj
+                })
+        th.start()
+        
+        # checking every time slows down pen movement too much
+        if args.automonitor:
+            while(True):
+                time.sleep(0.2)
+                new_monitor = get_current_monitor_num()
+                if new_monitor != monitor_num_obj[0]:
+                    monitor_num_obj[0] = new_monitor
+
 
     except PermissionError:
         log.error('Insufficient permissions for creating a virtual input device')

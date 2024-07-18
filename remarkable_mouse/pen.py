@@ -135,8 +135,7 @@ def applyPen(x=0, y=0, pressure=0, tiltX=0, tiltY=0):
         print(f"Error message: {ctypes.WinError(error_code).strerror}")
 
 
-        
-def read_tablet(rm_inputs, *, orientation, monitor_num, region, threshold, mode, auto_monitor, relative):
+def read_tablet(rm_inputs, *, orientation, monitor_num, region, threshold, mode, auto_monitor, relative, monitor_update):
     """Loop forever and map evdev events to mouse
 
     Args:
@@ -158,11 +157,9 @@ def read_tablet(rm_inputs, *, orientation, monitor_num, region, threshold, mode,
     stream = rm_inputs['pen']
 
     while True:
-        if auto_monitor:
-            new_monitor = get_current_monitor_num()
-            if new_monitor != monitor_num:
-                monitor_num = new_monitor
-                monitor, _ = get_monitor(region, monitor_num, orientation)
+        if auto_monitor and monitor_update[0] != monitor_num:
+            monitor_num=monitor_update[0]
+            monitor, _ = get_monitor(region, monitor_num, orientation)
 
         try:
             data = stream.read(16)

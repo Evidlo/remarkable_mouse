@@ -30,7 +30,7 @@ def get_current_monitor_num():
     return 0
 
 
-def get_monitor(region, monitor_num, orientation, auto_adjust):
+def get_monitor(region, monitor_num, orientation):
     """ Get info of where we want to map the tablet to
 
     Args:
