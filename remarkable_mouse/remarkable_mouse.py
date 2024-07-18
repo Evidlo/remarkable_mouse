@@ -202,16 +202,21 @@ def main():
                 'auto_monitor':args.automonitor, 
                 'relative':args.relative,
                 'monitor_update': monitor_num_obj
-                })
+                }, 
+                daemon=True)
         th.start()
         
         # checking every time slows down pen movement too much
-        if args.automonitor:
+
+        try:
             while(True):
-                time.sleep(0.2)
-                new_monitor = get_current_monitor_num()
-                if new_monitor != monitor_num_obj[0]:
-                    monitor_num_obj[0] = new_monitor
+                if args.automonitor:
+                    time.sleep(0.2)
+                    new_monitor = get_current_monitor_num()
+                    if new_monitor != monitor_num_obj[0]:
+                        monitor_num_obj[0] = new_monitor
+        except KeyboardInterrupt:
+            pass
 
 
     except PermissionError:

@@ -7,12 +7,12 @@ import math
 from .codes import codes
 from .common import get_monitor, remap, wacom_max_x, wacom_max_y, log_event, get_current_monitor_num
 
+
+# The amount of time waiting for stream.read(16) that counts as the pen becoming out of range
+TIMEOUT = 0.2
+
 logging.basicConfig(format='%(message)s')
 log = logging.getLogger('remouse')
-
-
-
-
 
 
 # wacom digitizer dimensions
@@ -45,6 +45,9 @@ def read_tablet(rm_inputs, *, orientation, monitor_num, region, threshold, mode,
 
     x = y = 0
 
+    # only used for relative tracking
+    # last_x and last_y are reset if the pen goes out of range
+    last_x = last_y = 0
     lastx_needsupdate=True
     lasty_needsupdate=True
     
@@ -63,7 +66,7 @@ def read_tablet(rm_inputs, *, orientation, monitor_num, region, threshold, mode,
         # time spent waiting for stream.read(). Used to see if pen was lifted for relative tracking since stream.read() will wait until more data comes in
         elapsed = time.time() - start
         
-        if elapsed > 0.2:
+        if elapsed > TIMEOUT:
             print(elapsed)
             lastx_needsupdate=True
             lasty_needsupdate=True
@@ -103,31 +106,36 @@ def read_tablet(rm_inputs, *, orientation, monitor_num, region, threshold, mode,
             )
             if relative:
                 mapped_last_x, mapped_last_y = remap(
-                last_x, last_y,
-                wacom_max_x, wacom_max_y,
-                monitor.width, monitor.height,
-                mode, orientation,
-            )
-                
-                
-                # print("startx", start_x)
-                # print("Mappedx", mapped_x)
-                # print("dx", monitor.x + mapped_x - start_x)
-                
-                print(mapped_x)
-                
-                mouse.move(
-                    monitor.x + mapped_x - mapped_last_x,
-                    monitor.y + mapped_y - mapped_last_y
+                    last_x, last_y,
+                    wacom_max_x, wacom_max_y,
+                    monitor.width, monitor.height,
+                    mode, orientation,
                 )
+                dx = mapped_x - mapped_last_x
+                dy = mapped_y - mapped_last_y
+
+                # not sure why but moving in negative x and y is twice as fast as moving positive
+                # probably an issue with remap but this fix works
+                if dx < 0:
+                    dx /= 2
+                if dy < 0:
+                    dy /= 2
+
+                print(dx)
+
+                mouse.move(
+                    dx,
+                    dy
+                )
+                last_x = x
+                last_y = y
                 
             else:
                 mouse.move(
                     monitor.x + mapped_x - mouse.position[0],
                     monitor.y + mapped_y - mouse.position[1]
                 )
-            last_x = x
-            last_y = y
+
 
         if log.level == logging.DEBUG:
             log_event(e_time, e_millis, e_type, e_code, e_value)
