@@ -76,7 +76,7 @@ def create_local_device():
     return device.create_uinput_device()
 
 
-def read_tablet(rm_inputs, *, orientation, monitor_num, region, threshold, mode, auto_monitor, relative, monitor_update):
+def read_tablet(rm_inputs, *, orientation, monitor_num, region, threshold, mode, auto_monitor, monitor_update):
     """Pipe rM evdev events to local device
 
     Args:
@@ -104,7 +104,7 @@ def read_tablet(rm_inputs, *, orientation, monitor_num, region, threshold, mode,
     while True:
         if auto_monitor and monitor_update[0] != monitor_num:
             monitor_num=monitor_update[0]
-            monitor, _ = get_monitor(region, monitor_num, orientation)
+            monitor, (tot_width, tot_height) = get_monitor(region, monitor_num, orientation)
 
         try:
             data = stream.read(16)
