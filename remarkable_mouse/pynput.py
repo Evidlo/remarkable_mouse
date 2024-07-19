@@ -20,7 +20,7 @@ log = logging.getLogger('remouse')
 # finger_width = 767
 # finger_height = 1023
 
-def read_tablet(rm_inputs, *, orientation, monitor_num, region, threshold, mode, auto_monitor, relative, monitor_update):
+def read_tablet(rm_inputs, *, orientation, monitor_num, region, threshold, mode, auto_monitor, monitor_update):
     """Loop forever and map evdev events to mouse
 
     Args:
@@ -45,11 +45,6 @@ def read_tablet(rm_inputs, *, orientation, monitor_num, region, threshold, mode,
 
     x = y = 0
 
-    # only used for relative tracking
-    # last_x and last_y are reset if the pen goes out of range
-    last_x = last_y = 0
-    lastx_needsupdate=True
-    lasty_needsupdate=True
     
     stream = rm_inputs['pen'] 
     while True:
@@ -66,7 +61,7 @@ def read_tablet(rm_inputs, *, orientation, monitor_num, region, threshold, mode,
         # time spent waiting for stream.read(). Used to see if pen was lifted for relative tracking since stream.read() will wait until more data comes in
         elapsed = time.time() - start
         
-        if elapsed > TIMEOUT:
+        if elapsed > 0.2:
             print(elapsed)
             lastx_needsupdate=True
             lasty_needsupdate=True
@@ -76,19 +71,10 @@ def read_tablet(rm_inputs, *, orientation, monitor_num, region, threshold, mode,
         # handle x direction
         if codes[e_type][e_code] == 'ABS_X':
             x = e_value
-            if lastx_needsupdate:
-                last_x = x
-                lastx_needsupdate = False
-                continue
             
         # handle y direction
         if codes[e_type][e_code] == 'ABS_Y':
-            y = e_value
-            if lasty_needsupdate:
-                last_y = y
-                lasty_needsupdate = False
-                continue
-        
+            y = e_value        
        
         # handle draw
         if codes[e_type][e_code] == 'BTN_TOUCH':
@@ -106,36 +92,31 @@ def read_tablet(rm_inputs, *, orientation, monitor_num, region, threshold, mode,
             )
             if relative:
                 mapped_last_x, mapped_last_y = remap(
-                    last_x, last_y,
-                    wacom_max_x, wacom_max_y,
-                    monitor.width, monitor.height,
-                    mode, orientation,
-                )
-                dx = mapped_x - mapped_last_x
-                dy = mapped_y - mapped_last_y
-
-                # not sure why but moving in negative x and y is twice as fast as moving positive
-                # probably an issue with remap but this fix works
-                if dx < 0:
-                    dx /= 2
-                if dy < 0:
-                    dy /= 2
-
-                print(dx)
-
+                last_x, last_y,
+                wacom_max_x, wacom_max_y,
+                monitor.width, monitor.height,
+                mode, orientation,
+            )
+                
+                
+                # print("startx", start_x)
+                # print("Mappedx", mapped_x)
+                # print("dx", monitor.x + mapped_x - start_x)
+                
+                print(mapped_x)
+                
                 mouse.move(
-                    dx,
-                    dy
+                    monitor.x + mapped_x - mapped_last_x,
+                    monitor.y + mapped_y - mapped_last_y
                 )
-                last_x = x
-                last_y = y
                 
             else:
                 mouse.move(
                     monitor.x + mapped_x - mouse.position[0],
                     monitor.y + mapped_y - mouse.position[1]
                 )
-
+            last_x = x
+            last_y = y
 
         if log.level == logging.DEBUG:
             log_event(e_time, e_millis, e_type, e_code, e_value)

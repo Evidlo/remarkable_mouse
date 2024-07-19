@@ -145,18 +145,17 @@ def main():
         Fill: take up the entire monitor, but not necessarily the entire tablet.
         Stretch: take up both the entire tablet and monitor, but don't maintain aspect ratio.""")
         parser.add_argument('--orientation', default='right', choices=['top', 'left', 'right', 'bottom'], help="position of tablet buttons")
-        parser.add_argument('--monitor', default=0, type=int, metavar='NUM', help="monitor to output to")
-        parser.add_argument('--region', action='store_true', default=False, help="Use a GUI to position the output area. Overrides --monitor and --auto-monitor")
+        parser.add_argument('--monitor', default=-1, type=int, metavar='NUM', help="override automatic monitor selection")
+        parser.add_argument('--region', action='store_true', default=False, help="Use a GUI to position the output area. Overrides --monitor and automatic monitor selection")
         parser.add_argument('--threshold', metavar='THRESH', default=600, type=int, help="stylus pressure threshold (default 600)")
-        parser.add_argument('--mouse', action='store_true', default=False, help="emulate mouse instead of pen (no pressure/tilt sensitivity). Default on macOS")
-        parser.add_argument('--automonitor', action='store_true', default=False, help="actively switch monitor to the one that the mouse is currently on. Overrides --monitor")
-        parser.add_argument('--relative', action='store_true', default=False, help="Use trackpad-like relative tracking instead of absolute tracking")
+        parser.add_argument('--evdev', action='store_true', default=False, help="use evdev to support pen pressure (requires root, Linux only)")
+        parser.add_argument('--pen', action='store_true', default=False, help="use pen input to support pen pressure in windows")
 
         args = parser.parse_args()
 
-        if args.region:
-            args["auto-monitor"] = False
 
+        automonitor = args.monitor == -1 and not args.region
+        
         if args.debug:
             log.setLevel(logging.DEBUG)
             print('Debugging enabled...')
@@ -176,13 +175,10 @@ def main():
         
         # ----- Handle events -----
 
-        system = platform.system()
 
-        if args.mouse:
-            from remarkable_mouse.pynput import read_tablet
-        elif system == LINUX:
+        if args.evdev:
             from remarkable_mouse.evdev import read_tablet
-        elif system == WINDOWS:
+        elif args.pen:
             from remarkable_mouse.pen import read_tablet
         else:
             from remarkable_mouse.pynput import read_tablet
@@ -199,24 +195,20 @@ def main():
                 'region':args.region, 
                 'threshold':args.threshold, 
                 'mode':args.mode, 
-                'auto_monitor':args.automonitor, 
-                'relative':args.relative,
+                'auto_monitor':automonitor, 
                 'monitor_update': monitor_num_obj
                 }, 
                 daemon=True)
         th.start()
         
         # checking every time slows down pen movement too much
-
-        try:
+        if automonitor:
             while(True):
                 if args.automonitor:
                     time.sleep(0.2)
                     new_monitor = get_current_monitor_num()
                     if new_monitor != monitor_num_obj[0]:
                         monitor_num_obj[0] = new_monitor
-        except KeyboardInterrupt:
-            pass
 
 
     except PermissionError:
