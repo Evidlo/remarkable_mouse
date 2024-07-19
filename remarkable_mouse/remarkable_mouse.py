@@ -16,9 +16,6 @@ import paramiko.agent
 import paramiko.config
 import time
 
-LINUX = "Linux"
-WINDOWS = "Windows"
-
 
 logging.basicConfig(format='%(message)s')
 log = logging.getLogger('remouse')
@@ -26,6 +23,8 @@ log = logging.getLogger('remouse')
 default_key = os.path.expanduser('~/.ssh/remarkable')
 config_path = os.path.expanduser('~/.ssh/config')
 
+
+POLL_TIME = 0.2
 
 def open_rm_inputs(*, address, key, password):
     """
@@ -202,13 +201,12 @@ def main():
         th.start()
         
         # checking every time slows down pen movement too much
-        if automonitor:
-            while(True):
-                if args.automonitor:
-                    time.sleep(0.2)
-                    new_monitor = get_current_monitor_num()
-                    if new_monitor != monitor_num_obj[0]:
-                        monitor_num_obj[0] = new_monitor
+        while(True):
+            time.sleep(POLL_TIME)
+            if automonitor:
+                new_monitor = get_current_monitor_num()
+                if new_monitor != monitor_num_obj[0]:
+                    monitor_num_obj[0] = new_monitor
 
 
     except PermissionError:
