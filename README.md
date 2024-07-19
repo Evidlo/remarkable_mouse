@@ -18,8 +18,7 @@ remouse
 By default, `10.11.99.1` is used as the address.  Find your password in the reMarkable's [settings menu](https://remarkablewiki.com/tech/ssh).  If you are on Linux using X11, you can use the `--evdev` option for pressure support.
 If you are on Windows, you can use the `--pen` option for pressure support.
 
-The monitor that the tablet will output to is dynamically changed to the one that the mouse is in. To output to only one monitor, 
-use the `--monitor` flag.
+The monitor that the tablet will output to is dynamically changed to the one that the mouse is in. To output to only one monitor, use the `--monitor` flag.
 
 To use the `--region` flag, you may need to install the `python3-tk` or `python3-tkinter` package with your package manager.
 
