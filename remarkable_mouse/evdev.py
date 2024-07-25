@@ -8,7 +8,7 @@ from socket import timeout as TimeoutError
 import libevdev
 
 from .codes import codes, types
-from .common import get_monitor, remap, wacom_max_x, wacom_max_y, log_event
+from .common import get_monitor, remap, wacom_max_x, wacom_max_y, log_event, get_current_monitor_num
 
 logging.basicConfig(format='%(message)s')
 log = logging.getLogger('remouse')
@@ -76,7 +76,7 @@ def create_local_device():
     return device.create_uinput_device()
 
 
-def read_tablet(rm_inputs, *, orientation, monitor_num, region, threshold, mode):
+def read_tablet(rm_inputs, *, orientation, monitor_num, region, threshold, mode, auto_monitor, monitor_update):
     """Pipe rM evdev events to local device
 
     Args:
@@ -97,10 +97,15 @@ def read_tablet(rm_inputs, *, orientation, monitor_num, region, threshold, mode)
 
     x = y = 0
 
+    
     # loop inputs forever
     # for input_name, stream in cycle(rm_inputs.items()):
     stream = rm_inputs['pen']
     while True:
+        if auto_monitor and monitor_update[0] != monitor_num:
+            monitor_num=monitor_update[0]
+            monitor, (tot_width, tot_height) = get_monitor(region, monitor_num, orientation)
+
         try:
             data = stream.read(16)
         except TimeoutError:

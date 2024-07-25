@@ -16,6 +16,9 @@ remouse
 ```
 
 By default, `10.11.99.1` is used as the address.  Find your password in the reMarkable's [settings menu](https://remarkablewiki.com/tech/ssh).  If you are on Linux using X11, you can use the `--evdev` option for pressure support.
+If you are on Windows, you can use the `--pen` option for pressure support.
+
+The monitor that the tablet will output to is dynamically changed to the one that the mouse is in. To output to only one monitor, use the `--monitor` flag.
 
 To use the `--region` flag, you may need to install the `python3-tk` or `python3-tkinter` package with your package manager.
 
@@ -44,25 +47,26 @@ sudo --preserve-env=USER,PATH env remouse --evdev
 # Usage
 
 ```
-usage: remouse [-h] [--debug] [--key PATH] [--password PASSWORD] [--address ADDRESS] [--mode {fit,fill,stretch}] [--orientation {top,left,right,bottom}] [--monitor NUM] [--region] [--threshold THRESH]
-               [--evdev]
+usage: remouse [-h] [--debug] [--key PATH] [--password PASSWORD] [--address ADDRESS] [--mode {fit,fill,stretch}] [--orientation {top,left,right,bottom}] [--monitor NUM] [--region]
+               [--threshold THRESH] [--evdev] [--pen]
 
 use reMarkable tablet as a mouse input
 
-optional arguments:
+options:
   -h, --help            show this help message and exit
   --debug               enable debug messages
   --key PATH            ssh private key
   --password PASSWORD   ssh password
   --address ADDRESS     device address
   --mode {fit,fill,stretch}
-                        Scale setting. Fit (default): take up the entire tablet, but not necessarily the entire monitor. Fill: take up the entire monitor, but not necessarily the entire tablet. Stretch:
-                        take up both the entire tablet and monitor, but don't maintain aspect ratio.
+                        Scale setting. Fit (default): take up the entire tablet, but not necessarily the entire monitor. Fill: take up the entire monitor, but not necessarily the entire
+                        tablet. Stretch: take up both the entire tablet and monitor, but don't maintain aspect ratio.
   --orientation {top,left,right,bottom}
                         position of tablet buttons
-  --monitor NUM         monitor to output to
-  --region              Use a GUI to position the output area. Overrides --monitor
+  --monitor NUM         override automatic monitor selection
+  --region              Use a GUI to position the output area. Overrides --monitor and automatic monitor selection
   --threshold THRESH    stylus pressure threshold (default 600)
   --evdev               use evdev to support pen pressure (requires root, Linux only)
+  --pen                 use pen input to support pen pressure in windows
 ```
 

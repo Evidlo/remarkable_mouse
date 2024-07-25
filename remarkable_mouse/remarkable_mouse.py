@@ -8,10 +8,14 @@ import sys
 import struct
 from getpass import getpass
 from itertools import cycle
-
+import platform 
+import threading
+from .common import get_current_monitor_num
 import paramiko
 import paramiko.agent
 import paramiko.config
+import time
+
 
 logging.basicConfig(format='%(message)s')
 log = logging.getLogger('remouse')
@@ -19,6 +23,8 @@ log = logging.getLogger('remouse')
 default_key = os.path.expanduser('~/.ssh/remarkable')
 config_path = os.path.expanduser('~/.ssh/config')
 
+
+POLL_TIME = 0.2
 
 def open_rm_inputs(*, address, key, password):
     """
@@ -130,6 +136,7 @@ def open_rm_inputs(*, address, key, password):
     return {'pen': pen, 'touch': touch, 'button': button}
 
 
+
 def main():
     try:
         parser = argparse.ArgumentParser(description="use reMarkable tablet as a mouse input")
@@ -142,13 +149,17 @@ def main():
         Fill: take up the entire monitor, but not necessarily the entire tablet.
         Stretch: take up both the entire tablet and monitor, but don't maintain aspect ratio.""")
         parser.add_argument('--orientation', default='right', choices=['top', 'left', 'right', 'bottom'], help="position of tablet buttons")
-        parser.add_argument('--monitor', default=0, type=int, metavar='NUM', help="monitor to output to")
-        parser.add_argument('--region', action='store_true', default=False, help="Use a GUI to position the output area. Overrides --monitor")
+        parser.add_argument('--monitor', default=-1, type=int, metavar='NUM', help="override automatic monitor selection")
+        parser.add_argument('--region', action='store_true', default=False, help="Use a GUI to position the output area. Overrides --monitor and automatic monitor selection")
         parser.add_argument('--threshold', metavar='THRESH', default=600, type=int, help="stylus pressure threshold (default 600)")
         parser.add_argument('--evdev', action='store_true', default=False, help="use evdev to support pen pressure (requires root, Linux only)")
+        parser.add_argument('--pen', action='store_true', default=False, help="use pen input to support pen pressure in windows")
 
         args = parser.parse_args()
 
+
+        automonitor = args.monitor == -1 and not args.region
+        
         if args.debug:
             log.setLevel(logging.DEBUG)
             print('Debugging enabled...')
@@ -164,22 +175,44 @@ def main():
         )
         print("Connected to", args.address)
 
+        
+        
         # ----- Handle events -----
+
 
         if args.evdev:
             from remarkable_mouse.evdev import read_tablet
-
+        elif args.pen:
+            from remarkable_mouse.pen import read_tablet
         else:
             from remarkable_mouse.pynput import read_tablet
 
-        read_tablet(
-            rm_inputs,
-            orientation=args.orientation,
-            monitor_num=args.monitor,
-            region=args.region,
-            threshold=args.threshold,
-            mode=args.mode,
-        )
+
+        check=threading.Condition()
+
+        monitor_num_obj = [args.monitor]
+        
+        th = threading.Thread(target=read_tablet, kwargs={
+                'rm_inputs':rm_inputs, 
+                'orientation':args.orientation, 
+                'monitor_num': args.monitor, 
+                'region':args.region, 
+                'threshold':args.threshold, 
+                'mode':args.mode, 
+                'auto_monitor':automonitor, 
+                'monitor_update': monitor_num_obj
+                }, 
+                daemon=True)
+        th.start()
+        
+        # checking every time slows down pen movement too much
+        while(True):
+            time.sleep(POLL_TIME)
+            if automonitor:
+                new_monitor = get_current_monitor_num()
+                if new_monitor != monitor_num_obj[0]:
+                    monitor_num_obj[0] = new_monitor
+
 
     except PermissionError:
         log.error('Insufficient permissions for creating a virtual input device')

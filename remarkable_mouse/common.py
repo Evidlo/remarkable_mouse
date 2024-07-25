@@ -3,7 +3,6 @@
 import logging
 import sys
 from screeninfo import get_monitors, Monitor
-
 from .codes import codes, types
 
 logging.basicConfig(format='%(message)s')
@@ -11,6 +10,25 @@ log = logging.getLogger('remouse')
 
 wacom_max_y = 15725
 wacom_max_x = 20967
+
+def get_current_monitor_num():
+    """ Get monitor number that the mouse is currently on
+
+    Returns:
+        int: monitor number that mouse is currently on, or 0 if couldn't pick one
+    """
+    from pynput.mouse import Controller
+
+    mouse = Controller()
+    mouse_x = mouse.position[0]
+    mouse_y = mouse.position[1]
+
+    for i, monitor in enumerate(get_monitors()):
+        if (mouse_x >= monitor.x and mouse_x < monitor.x + monitor.width and 
+                mouse_y >= monitor.y and mouse_y < monitor.y + monitor.height): 
+            return i
+    return 0
+
 
 def get_monitor(region, monitor_num, orientation):
     """ Get info of where we want to map the tablet to
@@ -20,6 +38,7 @@ def get_monitor(region, monitor_num, orientation):
         monitor_num (int): index of monitor to use.  Implies region=False
         orientation (str): Location of tablet charging port.
             ('top', 'bottom', 'left', 'right')
+        
 
     Returns:
         screeninfo.Monitor
