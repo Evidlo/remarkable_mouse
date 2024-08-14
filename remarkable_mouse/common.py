@@ -2,7 +2,7 @@
 
 import logging
 import sys
-from screeninfo import get_monitors, Monitor
+from screeninfo import get_monitors, Monitor, Enumerator
 
 from .codes import codes, types
 
@@ -28,7 +28,12 @@ def get_monitor(region, monitor_num, orientation):
 
     # compute size of box encompassing all screens
     max_x, max_y = 0, 0
-    for m in get_monitors():
+    if(sys.platform == 'darwin'):
+    	log.debug(f"Handling MacOS monitors")
+    	monitors = get_monitors(Enumerator.OSX)
+    else:
+    	monitors = get_monitors()
+    for m in monitors:
         x = m.x + m.width
         y = m.y + m.height
         max_x = max(x, max_x)
@@ -41,7 +46,7 @@ def get_monitor(region, monitor_num, orientation):
             name="Fake monitor from region selection"
         )
     else:
-        monitor = get_monitors()[monitor_num]
+        monitor = monitors[monitor_num]
 
     log.debug(f"Chose monitor: {monitor}")
     log.debug(f"Screen size: ({max_x}, {max_y})")
