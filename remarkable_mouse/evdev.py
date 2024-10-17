@@ -108,6 +108,9 @@ def read_tablet(rm_inputs, *, orientation, monitor_num, region, threshold, mode)
 
         e_time, e_millis, e_type, e_code, e_value = struct.unpack('2IHHi', data)
 
+        if log.level == logging.DEBUG:
+            log_event(e_time, e_millis, e_type, e_code, e_value)
+
         # intercept EV_ABS events and modify coordinates
         if types[e_type] == 'EV_ABS':
             # handle x direction
@@ -144,5 +147,3 @@ def read_tablet(rm_inputs, *, orientation, monitor_num, region, threshold, mode)
         e = libevdev.InputEvent(e_bit, value=e_value)
         local_device.send_events([e])
 
-        if log.level == logging.DEBUG:
-            log_event(e_time, e_millis, e_type, e_code, e_value)

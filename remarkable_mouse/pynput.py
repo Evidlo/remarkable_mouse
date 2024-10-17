@@ -45,6 +45,9 @@ def read_tablet(rm_inputs, *, orientation, monitor_num, region, threshold, mode)
 
         e_time, e_millis, e_type, e_code, e_value = struct.unpack('2IHHi', data)
 
+        if log.level == logging.DEBUG:
+            log_event(e_time, e_millis, e_type, e_code, e_value)
+
         # handle x direction
         if codes[e_type][e_code] == 'ABS_X':
             x = e_value
@@ -71,6 +74,3 @@ def read_tablet(rm_inputs, *, orientation, monitor_num, region, threshold, mode)
                 monitor.x + mapped_x - mouse.position[0],
                 monitor.y + mapped_y - mouse.position[1]
             )
-
-        if log.level == logging.DEBUG:
-            log_event(e_time, e_millis, e_type, e_code, e_value)
