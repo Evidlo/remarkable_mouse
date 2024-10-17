@@ -41,7 +41,10 @@ def get_monitor(region, monitor_num, orientation):
             name="Fake monitor from region selection"
         )
     else:
-        monitor = get_monitors()[monitor_num]
+        try:
+            monitor = get_monitors()[monitor_num]
+        except IndexError:
+            log.error(f"Monitor {monitor_num} not found.  Only {len(get_monitors())} detected.")
 
     log.debug(f"Chose monitor: {monitor}")
     log.debug(f"Screen size: ({max_x}, {max_y})")
