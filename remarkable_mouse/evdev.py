@@ -8,12 +8,12 @@ from socket import timeout as TimeoutError
 import libevdev
 
 from .codes import codes, types
-from .common import get_monitor, remap, wacom_max_x, wacom_max_y, log_event
+from .common import get_monitor, remap, log_event
 
 logging.basicConfig(format='%(message)s')
 log = logging.getLogger('remouse')
 
-def create_local_device():
+def create_local_device(rm):
     """
     Create a virtual input device on this host that has the same
     characteristics as a Wacom tablet.
@@ -46,23 +46,23 @@ def create_local_device():
 
     inputs = (
         # touch inputs
-        (libevdev.EV_ABS.ABS_MT_POSITION_X,  0,    20967,   100),
-        (libevdev.EV_ABS.ABS_MT_POSITION_Y,  0,    15725,  100),
-        (libevdev.EV_ABS.ABS_MT_PRESSURE,    0,    4095,   None),
-        (libevdev.EV_ABS.ABS_MT_TOUCH_MAJOR, 0,    255,   None),
-        (libevdev.EV_ABS.ABS_MT_TOUCH_MINOR, 0,    255,   None),
-        (libevdev.EV_ABS.ABS_MT_ORIENTATION, -127, 127,   None),
-        (libevdev.EV_ABS.ABS_MT_SLOT,        0,    31,    None),
-        (libevdev.EV_ABS.ABS_MT_TOOL_TYPE,   0,    1,     None),
-        (libevdev.EV_ABS.ABS_MT_TRACKING_ID, 0,    65535, None),
+        (libevdev.EV_ABS.ABS_MT_POSITION_X, *rm.touch_x),
+        (libevdev.EV_ABS.ABS_MT_POSITION_Y, *rm.touch_y),
+        (libevdev.EV_ABS.ABS_MT_PRESSURE, *rm.touch_pressure),
+        (libevdev.EV_ABS.ABS_MT_TOUCH_MAJOR, *rm.touch_major),
+        (libevdev.EV_ABS.ABS_MT_TOUCH_MINOR, *rm.touch_minor),
+        (libevdev.EV_ABS.ABS_MT_ORIENTATION, *rm.touch_orient),
+        (libevdev.EV_ABS.ABS_MT_SLOT, *rm.touch_slot),
+        (libevdev.EV_ABS.ABS_MT_TOOL_TYPE, *rm.touch_tool),
+        (libevdev.EV_ABS.ABS_MT_TRACKING_ID, *rm.touch_trackid),
 
         # pen inputs
-        (libevdev.EV_ABS.ABS_X,        0,     20967,  100), # cyttps5_mt driver
-        (libevdev.EV_ABS.ABS_Y,        0,     15725,  100), # cyttsp5_mt
-        (libevdev.EV_ABS.ABS_PRESSURE, 0,     4095,   None),
-        (libevdev.EV_ABS.ABS_DISTANCE, 0,     255,    None),
-        (libevdev.EV_ABS.ABS_TILT_X,   -6400, 6400,   6400),
-        (libevdev.EV_ABS.ABS_TILT_Y,   -6400, 6400,   6400)
+        (libevdev.EV_ABS.ABS_X, *rm.pen_x), # cyttps5_mt driver
+        (libevdev.EV_ABS.ABS_Y, *rm.pen_y), # cyttsp5_mt
+        (libevdev.EV_ABS.ABS_PRESSURE, *rm.pen_pressure),
+        (libevdev.EV_ABS.ABS_DISTANCE, *rm.pen_distance),
+        (libevdev.EV_ABS.ABS_TILT_X, *rm.pen_tilt_x),
+        (libevdev.EV_ABS.ABS_TILT_Y, *rm.pen_tilt_y)
     )
 
     for code, minimum, maximum, resolution in inputs:
@@ -76,19 +76,18 @@ def create_local_device():
     return device.create_uinput_device()
 
 
-def read_tablet(rm_inputs, *, orientation, monitor_num, region, threshold, mode):
+def read_tablet(rm, *, orientation, monitor_num, region, threshold, mode):
     """Pipe rM evdev events to local device
 
     Args:
-        rm_inputs (dictionary of paramiko.ChannelFile): dict of pen, button
-            and touch input streams
+        rm (reMarkable): tablet settings and input streams
         orientation (str): tablet orientation
         monitor_num (int): monitor number to map to
         threshold (int): pressure threshold
         mode (str): mapping mode
     """
 
-    local_device = create_local_device()
+    local_device = create_local_device(rm)
     log.debug("Created virtual input device '{}'".format(local_device.devnode))
 
     monitor, (tot_width, tot_height) = get_monitor(region, monitor_num, orientation)
@@ -97,9 +96,7 @@ def read_tablet(rm_inputs, *, orientation, monitor_num, region, threshold, mode)
 
     x = y = 0
 
-    # loop inputs forever
-    # for input_name, stream in cycle(rm_inputs.items()):
-    stream = rm_inputs['pen']
+    stream = rm.pen
     while True:
         try:
             data = stream.read(16)
@@ -124,7 +121,7 @@ def read_tablet(rm_inputs, *, orientation, monitor_num, region, threshold, mode)
             # map to screen coordinates so that region/monitor/orientation options are applied
             mapped_x, mapped_y = remap(
                 x, y,
-                wacom_max_x, wacom_max_y,
+                rm.pen_x.max, rm.pen_y.max,
                 monitor.width, monitor.height,
                 mode, orientation
             )
@@ -133,8 +130,8 @@ def read_tablet(rm_inputs, *, orientation, monitor_num, region, threshold, mode)
             mapped_y += monitor.y
 
             # map back to wacom coordinates to reinsert into event
-            mapped_x = mapped_x * wacom_max_x / tot_width
-            mapped_y = mapped_y * wacom_max_y / tot_height
+            mapped_x = mapped_x * rm.pen_x.max / tot_width
+            mapped_y = mapped_y * rm.pen_y.max / tot_height
 
             # reinsert modified values into evdev event
             if codes[e_type][e_code] == 'ABS_X':

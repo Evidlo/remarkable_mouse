@@ -4,7 +4,7 @@ from screeninfo import get_monitors
 
 # from .codes import EV_SYN, EV_ABS, ABS_X, ABS_Y, BTN_TOUCH
 from .codes import codes
-from .common import get_monitor, remap, wacom_max_x, wacom_max_y, log_event
+from .common import get_monitor, remap, log_event
 
 logging.basicConfig(format='%(message)s')
 log = logging.getLogger('remouse')
@@ -14,12 +14,11 @@ log = logging.getLogger('remouse')
 # finger_width = 767
 # finger_height = 1023
 
-def read_tablet(rm_inputs, *, orientation, monitor_num, region, threshold, mode):
+def read_tablet(rm, *, orientation, monitor_num, region, threshold, mode):
     """Loop forever and map evdev events to mouse
 
     Args:
-        rm_inputs (dictionary of paramiko.ChannelFile): dict of pen, button
-            and touch input streams
+        rm (reMarkable): tablet settings and input streams
         orientation (str): tablet orientation
         monitor_num (int): monitor number to map to
         region (boolean): whether to selection mapping region with region tool
@@ -36,7 +35,7 @@ def read_tablet(rm_inputs, *, orientation, monitor_num, region, threshold, mode)
 
     x = y = 0
 
-    stream = rm_inputs['pen']
+    stream = rm.pen
     while True:
         try:
             data = stream.read(16)
@@ -66,7 +65,7 @@ def read_tablet(rm_inputs, *, orientation, monitor_num, region, threshold, mode)
         if codes[e_type][e_code] == 'SYN_REPORT':
             mapped_x, mapped_y = remap(
                 x, y,
-                wacom_max_x, wacom_max_y,
+                rm.pen_x.max, rm.pen_y.max,
                 monitor.width, monitor.height,
                 mode, orientation,
             )

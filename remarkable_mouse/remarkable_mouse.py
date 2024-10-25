@@ -13,6 +13,8 @@ import paramiko
 import paramiko.agent
 import paramiko.config
 
+from .common import reMarkable1, reMarkable2, reMarkablePro
+
 logging.basicConfig(format='%(message)s')
 log = logging.getLogger('remouse')
 
@@ -20,7 +22,7 @@ default_key = os.path.expanduser('~/.ssh/remarkable')
 config_path = os.path.expanduser('~/.ssh/config')
 
 
-def open_rm_inputs(*, address, key, password):
+def connect_rm(*, address, key, password):
     """
     Open a remote input device via SSH.
 
@@ -104,26 +106,23 @@ def open_rm_inputs(*, address, key, password):
         'readlink -f /dev/input/touchscreen0'
     )[1].read().decode('utf8').rstrip('\n')
 
-    # handle both reMarkable versions
+    # detect reMarkable version
     # https://github.com/Eeems/oxide/issues/48#issuecomment-690830572
     if pen_file == '/dev/input/event0':
         # rM 1
-        touch_file = '/dev/input/event1'
-        button_file = '/dev/input/event2'
-    else:
+        rm = reMarkable1(client)
+    elif pen_file == '/dev/input/event1':
         # rM 2
-        touch_file = '/dev/input/event2'
-        button_file = '/dev/input/event0'
+        rm = reMarkable2(client)
+    elif pen_file == '/dev/input/event2':
+        # rM Pro
+        rm = reMarkablePro(client)
+    else:
+        raise ValueError(f"Could not detect reMarkable version. {pen_file}")
 
-    log.debug('Pen:{}\nTouch:{}\nButton:{}'.format(pen_file, touch_file, button_file))
+    log.debug("Detected {type(rm).__name__}")
 
-    # Start reading events
-    pen = client.exec_command('cat ' + pen_file)[1]
-    touch = client.exec_command('cat ' + touch_file)[1]
-    button = client.exec_command('cat ' + button_file)[1]
-
-    return {'pen': pen, 'touch': touch, 'button': button}
-
+    return rm
 
 def main():
     try:
@@ -152,7 +151,7 @@ def main():
 
         # ----- Connect to device -----
 
-        rm_inputs = open_rm_inputs(
+        rm = connect_rm(
             address=args.address,
             key=args.key,
             password=args.password,
@@ -168,7 +167,7 @@ def main():
             from remarkable_mouse.pynput import read_tablet
 
         read_tablet(
-            rm_inputs,
+            rm,
             orientation=args.orientation,
             monitor_num=args.monitor,
             region=args.region,
