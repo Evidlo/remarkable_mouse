@@ -21,6 +21,20 @@ class reMarkable1:
             device for reading pen/touch/button inputs
     """
 
+    r"""Coordinate systems
+
+        PEN          TOUCH
+    +---------+   +---------+
+    | X       |   |       Y |
+    | |       |   |       | |
+    | |       |   |       | |
+    | +--- Y  |   |  X ---+ |
+    |         |   |         |
+    |---------|   |---------|
+    | USB PORT|   | USB PORT|
+    +---------+   +---------+
+    """
+
     # evdev input file
     pen_file = '/dev/input/event0'
     touch_file = '/dev/input/event2'
