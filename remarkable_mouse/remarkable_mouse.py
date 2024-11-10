@@ -123,9 +123,9 @@ def open_rm_inputs(*, address, key, password):
     log.debug('Pen:{}\nTouch:{}\nButton:{}'.format(pen_file, touch_file, button_file))
 
     # Start reading events
-    pen = client.exec_command('cat ' + pen_file)[1]
-    touch = client.exec_command('cat ' + touch_file)[1]
-    button = client.exec_command('cat ' + button_file)[1]
+    pen = client.exec_command('dd bs=16 if=' + pen_file, bufsize=16, timeout=0)[1]
+    touch = client.exec_command('dd bs=16 if=' + touch_file, bufsize=16, timeout=0)[1]
+    button = client.exec_command('dd bs=16 if=' + button_file, bufsize=16, timeout=0)[1]
 
     return {'pen': pen, 'touch': touch, 'button': button}
 
