@@ -4,7 +4,7 @@ from screeninfo import get_monitors
 
 # from .codes import EV_SYN, EV_ABS, ABS_X, ABS_Y, BTN_TOUCH
 from .codes import codes
-from .common import get_monitor, remap, wacom_max_x, wacom_max_y, log_event
+from .common import get_monitor, log_event
 
 logging.basicConfig(format='%(message)s')
 log = logging.getLogger('remouse')
@@ -14,12 +14,11 @@ log = logging.getLogger('remouse')
 # finger_width = 767
 # finger_height = 1023
 
-def read_tablet(rm_inputs, *, orientation, monitor_num, region, threshold, mode):
+def read_tablet(rm, *, orientation, monitor_num, region, threshold, mode):
     """Loop forever and map evdev events to mouse
 
     Args:
-        rm_inputs (dictionary of paramiko.ChannelFile): dict of pen, button
-            and touch input streams
+        rm (reMarkable): tablet settings and input streams
         orientation (str): tablet orientation
         monitor_num (int): monitor number to map to
         region (boolean): whether to selection mapping region with region tool
@@ -36,41 +35,46 @@ def read_tablet(rm_inputs, *, orientation, monitor_num, region, threshold, mode)
 
     x = y = 0
 
-    stream = rm_inputs['pen']
+    stream = rm.pen
     while True:
         try:
-            data = stream.read(16)
+            # read evdev events from file stream
+            data = stream.read(struct.calcsize(rm.e_format))
         except TimeoutError:
             continue
 
-        e_time, e_millis, e_type, e_code, e_value = struct.unpack('2IHHi', data)
+        # parse evdev events
+        e_time, e_millis, e_type, e_code, e_value = struct.unpack(rm.e_format, data)
 
         if log.level == logging.DEBUG:
             log_event(e_time, e_millis, e_type, e_code, e_value)
 
-        # handle x direction
-        if codes[e_type][e_code] == 'ABS_X':
-            x = e_value
+        try:
+            # handle x direction
+            if codes[e_type][e_code] == 'ABS_X':
+                x = e_value
 
-        # handle y direction
-        if codes[e_type][e_code] == 'ABS_Y':
-            y = e_value
+            # handle y direction
+            if codes[e_type][e_code] == 'ABS_Y':
+                y = e_value
 
-        # handle draw
-        if codes[e_type][e_code] == 'BTN_TOUCH':
-            if e_value == 1:
-                mouse.press(Button.left)
-            else:
-                mouse.release(Button.left)
+            # handle draw
+            if codes[e_type][e_code] == 'BTN_TOUCH':
+                if e_value == 1:
+                    mouse.press(Button.left)
+                else:
+                    mouse.release(Button.left)
 
-        if codes[e_type][e_code] == 'SYN_REPORT':
-            mapped_x, mapped_y = remap(
-                x, y,
-                wacom_max_x, wacom_max_y,
-                monitor.width, monitor.height,
-                mode, orientation,
-            )
-            mouse.move(
-                monitor.x + mapped_x - mouse.position[0],
-                monitor.y + mapped_y - mouse.position[1]
-            )
+            if codes[e_type][e_code] == 'SYN_REPORT':
+                mapped_x, mapped_y = rm.remap(
+                    x, y,
+                    rm.pen_x.max, rm.pen_y.max,
+                    monitor.width, monitor.height,
+                    mode, orientation,
+                )
+                mouse.move(
+                    monitor.x + mapped_x - mouse.position[0],
+                    monitor.y + mapped_y - mouse.position[1]
+                )
+        except KeyError as e:
+            log.debug(f"Invalid evdev event: type:{e_type} code:{e_code}")
