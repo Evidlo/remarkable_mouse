@@ -2,6 +2,7 @@
 
 from collections import namedtuple
 import logging
+import struct
 import sys
 from screeninfo import get_monitors, Monitor
 
@@ -41,6 +42,7 @@ class reMarkable1:
     button_file = '/dev/input/event1'
     # struct parsing format for evdev events
     e_format = '2IHHi'
+    e_sz = struct.calcsize(e_format)
 
     # stylus evdev settings (min, max, resolution)
     touch_x = ev(0, 20967, 100) # touchscreen X coordinate (ABS_MT_POSITION_X)
@@ -67,20 +69,20 @@ class reMarkable1:
     @property
     def pen(self):
         """(paramiko.ChannelFile) pen stream"""
-        cmd = f'dd bs=16 if={self.pen_file}'
-        return self.client.exec_command(cmd, bufsize=16, timeout=0)[1]
+        cmd = f'dd bs={self.e_sz} if={self.pen_file}'
+        return self.client.exec_command(cmd, bufsize=self.e_sz, timeout=0)[1]
 
     @property
     def touch(self):
         """(paramiko.ChannelFile) touch stream"""
-        cmd = f'dd bs=16 if={self.touch_file}'
-        return self.client.exec_command(cmd, bufsize=16, timeout=0)[1]
+        cmd = f'dd bs={self.e_sz} if={self.touch_file}'
+        return self.client.exec_command(cmd, bufsize=self.e_sz, timeout=0)[1]
 
     @property
     def button(self):
         """(paramiko.ChannelFile) button stream"""
-        cmd = f'dd bs=16 if={self.button_file}'
-        return self.client.exec_command(cmd, bufsize=16, timeout=0)[1]
+        cmd = f'dd bs={self.e_sz} if={self.button_file}'
+        return self.client.exec_command(cmd, bufsize=self.e_sz, timeout=0)[1]
 
     def remap(self, x, y, max_x, max_y, monitor_width,
             monitor_height, mode, orientation):
@@ -141,6 +143,7 @@ class reMarkablePro(reMarkable1):
     touch_file = '/dev/input/event3'
     button_file = '/dev/input/event0'
     e_format = 'I4xI4xHHi'
+    e_sz = struct.calcsize(e_format)
     # stylus evdev settings (min, max, resolution)
     touch_x = ev(0, 2064, 2064) # touchscreen X coordinate (ABS_MT_POSITION_X)
     touch_y = ev(0, 2832, 2832) # touchscreen Y coordinate (ABS_MT_POSITION_Y)
