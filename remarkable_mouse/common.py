@@ -152,6 +152,14 @@ class reMarkablePro(reMarkable1):
     touch_slot = ev(0, 9, None) # tool slot ID (ABS_MT_SLOT)
     touch_tool = ev(0, 2, None) # tool type (ABS_MT_TOOL_TYPE)
 
+    # pen evdev settings (min, max, resolution)
+    pen_x = ev(0, 11180, 2832) # pen X coordinate (ABS_X)
+    pen_y = ev(0, 15340, 2064) # pen Y coordinate (ABS_Y)
+    pen_pressure = ev(0, 4096, None) # pen pressure (ABS_PRESSURE)
+    pen_distance = ev(0, 65535, None) # pen distance from screen (ABS_DISTANCE)
+    pen_tilt_x = ev(-9000, 9000, None) # pen tilt angle (ABS_TILT_X)
+    pen_tilt_y = ev(-9000, 9000, None) # pen tilt angle (ABS_TILT_Y)
+
     def remap(self, x, y, max_x, max_y, monitor_width,
             monitor_height, mode, orientation):
         """remap pen coordinates to screen coordinates"""
