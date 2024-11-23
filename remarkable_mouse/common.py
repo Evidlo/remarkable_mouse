@@ -82,12 +82,61 @@ class reMarkable1:
         cmd = f'dd bs=16 if={self.button_file}'
         return self.client.exec_command(cmd, bufsize=16, timeout=0)[1]
 
+    def remap(self, x, y, max_x, max_y, monitor_width,
+            monitor_height, mode, orientation):
+        """remap pen coordinates to screen coordinates"""
+
+        if orientation == 'right':
+            x, y = max_x - x, max_y - y
+        if orientation == 'left':
+            pass
+        if orientation == 'top':
+            x, y = max_y - y, x
+            max_x, max_y = max_y, max_x
+        if orientation == 'bottom':
+            x, y = y, max_x - x
+            max_x, max_y = max_y, max_x
+
+        ratio_width, ratio_height = monitor_width / max_x, monitor_height / max_y
+
+        if mode == 'fill':
+            scaling_x = max(ratio_width, ratio_height)
+            scaling_y = scaling_x
+        elif mode == 'fit':
+            scaling_x = min(ratio_width, ratio_height)
+            scaling_y = scaling_x
+        elif mode == 'stretch':
+            scaling_x = ratio_width
+            scaling_y = ratio_height
+        else:
+            raise NotImplementedError
+
+        return (
+            scaling_x * (x - (max_x - monitor_width / scaling_x) / 2),
+            scaling_y * (y - (max_y - monitor_height / scaling_y) / 2)
+        )
+
 class reMarkable2(reMarkable1):
     pen_file = '/dev/input/event1'
     touch_file = '/dev/input/event2'
     button_file = '/dev/input/event0'
 
 class reMarkablePro(reMarkable1):
+    r"""
+       rMPro COORDINATES
+
+       PEN         TOUCH
+    +--------+   +--------+
+    | +---X  |   | +---X  |
+    | |      |   | |      |
+    | |      |   | |      |
+    | Y      |   | Y      |
+    |        |   |        |
+    |--------|   |--------|
+    |USB PORT|   |USB PORT|
+    +--------+   +--------+
+    """
+
     pen_file = '/dev/input/event2'
     touch_file = '/dev/input/event3'
     button_file = '/dev/input/event0'
@@ -99,6 +148,39 @@ class reMarkablePro(reMarkable1):
     touch_orient = ev(-127, 127, None) # touch orientation (ABS_MT_ORIENTATION)
     touch_slot = ev(0, 9, None) # tool slot ID (ABS_MT_SLOT)
     touch_tool = ev(0, 2, None) # tool type (ABS_MT_TOOL_TYPE)
+
+    def remap(self, x, y, max_x, max_y, monitor_width,
+            monitor_height, mode, orientation):
+        """remap pen coordinates to screen coordinates"""
+        if orientation == 'bottom':
+            pass
+        if orientation == 'right':
+            x, y = y, max_x - x
+            max_x, max_y = max_y, max_x
+        if orientation == 'left':
+            x, y = max_y - y, x
+            max_x, max_y = max_y, max_x
+        if orientation == 'top':
+            x, y = max_x - x, max_y - y
+
+        ratio_width, ratio_height = monitor_width / max_x, monitor_height / max_y
+
+        if mode == 'fill':
+            scaling_x = max(ratio_width, ratio_height)
+            scaling_y = scaling_x
+        elif mode == 'fit':
+            scaling_x = min(ratio_width, ratio_height)
+            scaling_y = scaling_x
+        elif mode == 'stretch':
+            scaling_x = ratio_width
+            scaling_y = ratio_height
+        else:
+            raise NotImplementedError
+
+        return (
+            scaling_x * (x - (max_x - monitor_width / scaling_x) / 2),
+            scaling_y * (y - (max_y - monitor_height / scaling_y) / 2)
+        )
 
 
 def get_monitor(region, monitor_num, orientation):
@@ -202,39 +284,6 @@ def get_region(orientation):
     return window_bounds
 
 
-# remap wacom coordinates to screen coordinates
-def remap(x, y, pen_max_x, pen_max_y, monitor_width,
-          monitor_height, mode, orientation):
-
-    if orientation == 'right':
-        x, y = pen_max_x - x, pen_max_y - y
-    if orientation == 'left':
-        pass
-    if orientation == 'top':
-       x, y = pen_max_y - y, x
-       pen_max_x, pen_max_y = pen_max_y, pen_max_x
-    if orientation == 'bottom':
-       x, y = y, pen_max_x - x
-       pen_max_x, pen_max_y = pen_max_y, pen_max_x
-
-    ratio_width, ratio_height = monitor_width / pen_max_x, monitor_height / pen_max_y
-
-    if mode == 'fill':
-        scaling_x = max(ratio_width, ratio_height)
-        scaling_y = scaling_x
-    elif mode == 'fit':
-        scaling_x = min(ratio_width, ratio_height)
-        scaling_y = scaling_x
-    elif mode == 'stretch':
-        scaling_x = ratio_width
-        scaling_y = ratio_height
-    else:
-        raise NotImplementedError
-
-    return (
-        scaling_x * (x - (pen_max_x - monitor_width / scaling_x) / 2),
-        scaling_y * (y - (pen_max_y - monitor_height / scaling_y) / 2)
-    )
 
 # log evdev event to console
 def log_event(e_time, e_millis, e_type, e_code, e_value):

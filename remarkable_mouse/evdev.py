@@ -8,7 +8,7 @@ from socket import timeout as TimeoutError
 import libevdev
 
 from .codes import codes, types
-from .common import get_monitor, remap, log_event
+from .common import get_monitor, log_event
 
 logging.basicConfig(format='%(message)s')
 log = logging.getLogger('remouse')
@@ -96,10 +96,11 @@ def read_tablet(rm, *, orientation, monitor_num, region, threshold, mode):
 
     x = y = 0
 
+    stream = rm.pen
     while True:
         try:
             # read evdev events from file stream
-            data = rm.pen.read(struct.calcsize(rm.evdev_format))
+            data = stream.read(struct.calcsize(rm.e_format))
         except TimeoutError:
             continue
 
@@ -121,7 +122,7 @@ def read_tablet(rm, *, orientation, monitor_num, region, threshold, mode):
                     y = e_value
 
                 # map to screen coordinates so that region/monitor/orientation options are applied
-                mapped_x, mapped_y = remap(
+                mapped_x, mapped_y = rm.remap(
                     x, y,
                     rm.pen_x.max, rm.pen_y.max,
                     monitor.width, monitor.height,
