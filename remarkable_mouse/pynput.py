@@ -72,7 +72,6 @@ def read_tablet(rm, *, orientation, monitor_num, region, threshold, mode):
                     monitor.width, monitor.height,
                     mode, orientation,
                 )
-                log.debug("moving mouse to (X,Y): {}, {}".format(mapped_x, mapped_y))
                 mouse.move(
                     monitor.x + mapped_x - mouse.position[0],
                     monitor.y + mapped_y - mouse.position[1]

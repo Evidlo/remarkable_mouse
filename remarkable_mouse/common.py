@@ -152,15 +152,6 @@ class reMarkablePro(reMarkable1):
     touch_slot = ev(0, 9, None) # tool slot ID (ABS_MT_SLOT)
     touch_tool = ev(0, 2, None) # tool type (ABS_MT_TOOL_TYPE)
 
-    # pen evdev settings (min, max, resolution)
-    pen_x = ev(0, 11171, 11171) # pen X coordinate (ABS_X)
-
-    @property
-    def pen(self):
-        """(paramiko.ChannelFile) pen stream"""
-        cmd = f'dd bs=24 if={self.pen_file}'
-        return self.client.exec_command(cmd, bufsize=24, timeout=0)[1]
-
     def remap(self, x, y, max_x, max_y, monitor_width,
             monitor_height, mode, orientation):
         """remap pen coordinates to screen coordinates"""
