@@ -35,14 +35,15 @@ def read_tablet(rm, *, orientation, monitor_num, region, threshold, mode):
 
     x = y = 0
 
-    stream = rm.pen
     while True:
         try:
-            data = stream.read(16)
+            # read evdev events from file stream
+            data = rm.pen.read(struct.calcsize(rm.evdev_format))
         except TimeoutError:
             continue
 
-        e_time, e_millis, e_type, e_code, e_value = struct.unpack('2IHHi', data)
+        # parse evdev events
+        e_time, e_millis, e_type, e_code, e_value = struct.unpack(rm.e_format, data)
 
         if log.level == logging.DEBUG:
             log_event(e_time, e_millis, e_type, e_code, e_value)

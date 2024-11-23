@@ -39,6 +39,8 @@ class reMarkable1:
     pen_file = '/dev/input/event0'
     touch_file = '/dev/input/event2'
     button_file = '/dev/input/event1'
+    # struct parsing format for evdev events
+    e_format = '2IHHi'
 
     # stylus evdev settings (min, max, resolution)
     touch_x = ev(0, 20967, 100) # touchscreen X coordinate (ABS_MT_POSITION_X)
@@ -89,6 +91,7 @@ class reMarkablePro(reMarkable1):
     pen_file = '/dev/input/event2'
     touch_file = '/dev/input/event3'
     button_file = '/dev/input/event0'
+    e_format = 'I4xI4xHHi'
     # stylus evdev settings (min, max, resolution)
     touch_x = ev(0, 2064, 2064) # touchscreen X coordinate (ABS_MT_POSITION_X)
     touch_y = ev(0, 2832, 2832) # touchscreen Y coordinate (ABS_MT_POSITION_Y)
