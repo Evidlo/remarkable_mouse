@@ -119,7 +119,7 @@ def connect_rm(*, address, key, password):
     elif pen_file == '/dev/input/event1':
         # rM 2
         rm = reMarkable2(client)
-    elif pen_file == '/dev/input/event2':
+    elif pen_file == '/dev/input/event3' or pen_file == '/dev/input/event2':# keep checking event2 to support software before 3.16
         # rM Pro
         rm = reMarkablePro(client)
     else:
