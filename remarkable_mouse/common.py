@@ -86,7 +86,10 @@ class reMarkable1:
 
     def remap(self, x, y, max_x, max_y, monitor_width,
             monitor_height, mode, orientation):
-        """remap pen coordinates to screen coordinates"""
+        """remap pen coordinates to screen coordinates
+
+        TODO: consider rewriting this whole function as matrix transform
+        """
 
         if orientation == 'right':
             x, y = max_x - x, max_y - y
@@ -162,7 +165,10 @@ class reMarkablePro(reMarkable1):
 
     def remap(self, x, y, max_x, max_y, monitor_width,
             monitor_height, mode, orientation):
-        """remap pen coordinates to screen coordinates"""
+        """remap pen coordinates to screen coordinates
+
+        TODO: consider rewriting this whole function as matrix transform
+        """
         if orientation == 'bottom':
             pass
         if orientation == 'right':
