@@ -45,7 +45,7 @@ sudo --preserve-env=USER,PATH env remouse --evdev
 
 ```
 usage: remouse [-h] [--debug] [--key PATH] [--password PASSWORD] [--address ADDRESS] [--mode {fit,fill,stretch}] [--orientation {top,left,right,bottom}] [--monitor NUM] [--region] [--threshold THRESH]
-               [--evdev]
+               [--evdev] [--pressure]
 
 use reMarkable tablet as a mouse input
 
@@ -63,6 +63,7 @@ optional arguments:
   --monitor NUM         monitor to output to
   --region              Use a GUI to position the output area. Overrides --monitor
   --threshold THRESH    stylus pressure threshold (default 600)
-  --evdev               use evdev to support pen pressure (requires root, Linux only)
+  --pressure            enable pen pressure support on Linux or Windows (requires root on Linux, uses evdev)
+  --evdev               (deprecated) alias for --pressure
 ```
 
