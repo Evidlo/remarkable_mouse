@@ -22,7 +22,7 @@ default_key = os.path.expanduser('~/.ssh/remarkable')
 config_path = os.path.expanduser('~/.ssh/config')
 
 
-def connect_rm(*, address, key, password):
+def connect_rm(*, address, key, password, use_agent=False):
     """
     Open a remote input device via SSH.
 
@@ -30,6 +30,7 @@ def connect_rm(*, address, key, password):
         address (str): address to reMarkable
         key (str, optional): path to reMarkable ssh key
         password (str, optional): reMarkable ssh password
+        use_agent (bool, optional): use the ssh agent to load keys, if key and password are not provided.
     Returns:
         (paramiko.ChannelFile): read-only stream of pen events
         (paramiko.ChannelFile): read-only stream of touch events
@@ -77,14 +78,14 @@ def connect_rm(*, address, key, password):
         password = None
         pkey = use_key(key)
     # fallback to "remarkable" entry in ssh config
-    elif 'identityfile' in config_entry and len(config_entry['identityfile']) > 0:
+    elif 'identityfile' in config_entry and len(config_entry['identityfile']) > 0 and not use_agent:
         password = None
         pkey = use_key(config_entry['identityfile'][0])
     # fallback to user-provided password
     elif password is not None:
         pkey = None
     # fallback to default pubkey location
-    elif os.path.exists(default_key):
+    elif os.path.exists(default_key) and not use_agent:
         password = None
         pkey = use_key(default_key)
     # finally prompt user for password
@@ -93,14 +94,15 @@ def connect_rm(*, address, key, password):
             "Password for '{}': ".format(address)
         )
         pkey = None
-
+    
+    disabled_algorithms = dict(pubkeys=["rsa-sha2-512", "rsa-sha2-256"]) if (not use_agent) else None
     client.connect(
         address,
         username='root',
         password=password,
         pkey=pkey,
         look_for_keys=False,
-        disabled_algorithms=dict(pubkeys=["rsa-sha2-512", "rsa-sha2-256"])
+        disabled_algorithms=disabled_algorithms
     )
 
     session = client.get_transport().open_session()
@@ -135,6 +137,7 @@ def main():
         parser = argparse.ArgumentParser(description="use reMarkable tablet as a mouse input")
         parser.add_argument('--debug', action='store_true', default=False, help="enable debug messages")
         parser.add_argument('--key', type=str, metavar='PATH', help="ssh private key")
+        parser.add_argument('--use_agent', action='store_true', default=False, help="use ssh agent to load keys when not supplying a key or password")
         parser.add_argument('--password', default=None, type=str, help="ssh password")
         parser.add_argument('--address', default='10.11.99.1', type=str, help="device address")
         parser.add_argument('--mode', default='fill', choices=['fit', 'fill', 'stretch'], help="""Scale setting.
@@ -161,6 +164,7 @@ def main():
             address=args.address,
             key=args.key,
             password=args.password,
+            use_agent=args.use_agent,
         )
         print("Connected to", args.address)
 
