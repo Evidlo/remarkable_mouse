@@ -1,0 +1,31 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "remarkable-mouse"
+version = "7.1.1"
+description = "use reMarkable as a graphics tablet"
+readme = "README.md"
+license = "GPL-3.0-only"
+requires-python = ">=3"
+keywords = ["remarkable", "tablet", "evdev"]
+authors = [
+    {name = "Evan Widloski", email = "evan@evanw.org"},
+]
+classifiers = [
+    "Programming Language :: Python :: 3",
+]
+dependencies = [
+    "paramiko",
+    "libevdev",
+    "pynput",
+    "screeninfo",
+]
+
+[project.urls]
+Homepage = "https://github.com/evidlo/remarkable_mouse"
+
+[project.scripts]
+remarkable-mouse = "remarkable_mouse.remarkable_mouse:main"
+remouse = "remarkable_mouse.remarkable_mouse:main"

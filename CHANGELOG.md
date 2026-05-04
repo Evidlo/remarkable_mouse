@@ -1,3 +1,9 @@
+# 7.2.1 - 2026-05-04
+- merge rmpro support
+- catch TypeError on unknown evdev codes
+- improved performance on windows (#93)
+- switch to pyproject.toml
+
 # 7.1.0 - 2022-09-25
 - fix stretching/fitting/filling/rotation in evdev mode
 - fix evdev tilt

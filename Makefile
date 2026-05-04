@@ -3,7 +3,7 @@
 
 .PHONY: dist
 dist:
-	python setup.py sdist bdist_wheel
+	python -m build
 
 .PHONY: pypi
 pypi: dist
