@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "remarkable-mouse"
-version = "7.1.1"
+version = "7.2.0"
 description = "use reMarkable as a graphics tablet"
 readme = "README.md"
 license = "GPL-3.0-only"
