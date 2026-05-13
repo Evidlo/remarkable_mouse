@@ -6,6 +6,8 @@ Special thanks to [canselcik](https://github.com/canselcik/libremarkable) and [L
 
 <img src="photo.gif" width=800>
 
+See also [remarkable_keyboard](https://github.com/Evidlo/remarkable_keyboard) for using reMarkable as a wireless trackpad/keyboard.
+
 # Quick Start
 
 On the host machine with the tablet plugged in via USB:
