@@ -8,6 +8,8 @@ Special thanks to [canselcik](https://github.com/canselcik/libremarkable) and [L
 
 See also [remarkable_keyboard](https://github.com/Evidlo/remarkable_keyboard) for using reMarkable as a wireless trackpad/keyboard.
 
+**Help wanted**:  reMarkable Pro support is currently buggy (I do not own this device).  Any developers willing to add/fix support should read https://github.com/Evidlo/remarkable_mouse/issues/92#issuecomment-2676482827
+
 # Quick Start
 
 On the host machine with the tablet plugged in via USB:
