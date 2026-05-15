@@ -145,7 +145,8 @@ def main():
         parser.add_argument('--monitor', default=0, type=int, metavar='NUM', help="monitor to output to")
         parser.add_argument('--region', action='store_true', default=False, help="Use a GUI to position the output area. Overrides --monitor")
         parser.add_argument('--threshold', metavar='THRESH', default=600, type=int, help="stylus pressure threshold (default 600)")
-        parser.add_argument('--evdev', action='store_true', default=False, help="use evdev to support pen pressure (requires root, Linux only)")
+        parser.add_argument('--evdev', action='store_true', default=False, help="(deprecated) alias for --pressure")
+        parser.add_argument('--pressure', action='store_true', default=False, help="Enable pen pressure support on Linux or Windows (requires root on Linux)")
 
         args = parser.parse_args()
 
@@ -167,8 +168,20 @@ def main():
         # ----- Handle events -----
 
         if args.evdev:
-            from remarkable_mouse.evdev import read_tablet
-
+            print("--evdev argument deprecated, use --pressure for pressure support on Linux or Windows.")
+            args.pressure = True
+        
+        if args.pressure:
+            print("Pressure support enabled...")
+            if sys.platform == "linux":
+                print("Using evdev for Linux pressure support.")
+                from remarkable_mouse.evdev import read_tablet
+            elif sys.platform == "win32":
+                print("Using Windows Pen Input for Windows pressure support.")
+                from remarkable_mouse.winpen import read_tablet
+            else:
+                print("Unsupported platform for pressure support.")
+                from remarkable_mouse.pynput import read_tablet
         else:
             from remarkable_mouse.pynput import read_tablet
 
