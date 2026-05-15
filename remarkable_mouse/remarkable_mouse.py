@@ -128,9 +128,11 @@ def connect_rm(*, address, key, password):
     log.debug("Detected {type(rm).__name__}")
     log.debug(f'Pen:{rm.pen_file}\nTouch:{rm.touch_file}\nButton:{rm.button_file}')
 
-    return rm
+    return rm, client
 
 def main():
+    client = None
+    ui_stopped = False
     try:
         parser = argparse.ArgumentParser(description="use reMarkable tablet as a mouse input")
         parser.add_argument('--debug', action='store_true', default=False, help="enable debug messages")
@@ -146,6 +148,7 @@ def main():
         parser.add_argument('--region', action='store_true', default=False, help="Use a GUI to position the output area. Overrides --monitor")
         parser.add_argument('--threshold', metavar='THRESH', default=600, type=int, help="stylus pressure threshold (default 600)")
         parser.add_argument('--evdev', action='store_true', default=False, help="use evdev to support pen pressure (requires root, Linux only)")
+        parser.add_argument('--stopui', action='store_true', default=False, help="forcibly stop reMarkable UI when connecting (DOES NOT SAVE OPEN DOCUMENTS)")
 
         args = parser.parse_args()
 
@@ -157,12 +160,19 @@ def main():
 
         # ----- Connect to device -----
 
-        rm = connect_rm(
+        rm, client = connect_rm(
             address=args.address,
             key=args.key,
             password=args.password,
         )
         print("Connected to", args.address)
+
+        if args.stopui:
+            print("--stopui argument passed. Forcibly stopping reMarkable UI...")
+            print("UI will be restarted when remarkable_mouse is exited.")
+            print("If connection is lost before UI restarts, hold the reMarkable power button for 10 seconds, wait 5 seconds, then hold for 2 seconds, to reboot the device.")
+            ui_stopped = True
+            client.exec_command('systemctl stop xochitl')
 
         # ----- Handle events -----
 
@@ -189,6 +199,10 @@ def main():
         pass
     except EOFError:
         pass
+    finally:
+        if ui_stopped:
+            print("Restarting reMarkable UI...")
+            client.exec_command('systemctl start xochitl')
 
 if __name__ == '__main__':
     main()
