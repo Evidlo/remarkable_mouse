@@ -123,7 +123,7 @@ def connect_rm(*, address, key, password):
         # rM Pro
         rm = reMarkablePro(client)
     elif pen_file == '/dev/input/event3':
-        # still rM Pro (new software version?)
+        # rM Pro (seems to be a new software version)
         rm = reMarkablePro(client)
     else:
         raise ValueError(f"Could not detect reMarkable version. {pen_file}")
